@@ -3,14 +3,15 @@ import Credentials from "next-auth/providers/credentials";
 import { JWT } from "next-auth/jwt";
 import { compare } from "bcryptjs";
 import prisma from "./prisma";
+import { hash, verify } from "argon2";
 
 declare module "next-auth" {
     interface User {
-        role: string;
+        address: string;
     }
     interface Session {
         user: {
-            role: string;
+            address: string;
         } & DefaultSession["user"];
     }
 }
@@ -18,7 +19,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
     interface JWT {
         id?: string;
-        role: string;
+        address: string;
     }
 }
 
@@ -36,7 +37,7 @@ const authConfig: NextAuthConfig = {
                 let user;
                 try {
                     // Fetch user from the database
-                    user = await prisma.users.findFirst({ where: { email } });
+                    user = await prisma.user.findFirst({ where: { email } });
                 } catch (error) {
                     return null
                 }
@@ -44,9 +45,11 @@ const authConfig: NextAuthConfig = {
                 if (!user) {
                     return null
                 }
-
+                console.log(password)
+                console.log(user.password)
+                const matched = await verify(user.password, password);
                 // Compare password with the hashed password in the database
-                const matched = await compare(password, user.password as string);
+                // const matched = await compare(password, user.password as string);
                 if (!matched) {
                     return null
                 }
@@ -55,7 +58,7 @@ const authConfig: NextAuthConfig = {
                     id: user.id,
                     email: user.email,
                     name: user.name,
-                    role: user.role.toString(),
+                    address: user.address
                 };
             },
         }),
@@ -64,13 +67,13 @@ const authConfig: NextAuthConfig = {
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
-                token.role = user.role;
+                token.role = user.address;
             }
             return token;
         },
         async session({ session, token }) {
             session.user.id = token.id ?? "";
-            session.user.role = token.role;
+            session.user.address = token.address;
             return session;
         },
     },

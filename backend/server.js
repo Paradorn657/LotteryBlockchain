@@ -66,6 +66,32 @@ async function autoGenerateLottery() {
   startLottery();
 
 
+  app.get("/api/winning-numbers", async (req, res) => {
+    try {
+      // ดึงรอบล่าสุดจาก contract
+      const latestRoundId = await lotteryContract.getLatestRoundId();
+  
+      // ตรวจสอบว่า latestRoundId เป็น 0 หรือไม่ เพื่อหลีกเลี่ยงข้อผิดพลาด
+      if (latestRoundId.toString() === "0") {
+        return res.status(400).json({ error: "ยังไม่มีรอบหวย" });
+      }
+  
+      // ดึงเลขรางวัลจากรอบที่แล้ว (previous round)
+      const previousRoundId = (BigInt(latestRoundId) - 1n).toString(); // ลดค่าของ roundId ลง 1
+      const winningNumbers = await lotteryContract.getWinningNumbers(previousRoundId);
+  
+      // ส่งข้อมูลเลขรางวัลกลับไป
+      res.json({
+        roundId: previousRoundId,
+        winningNumbers: winningNumbers.map(num => num.toString()), // แปลงค่าเป็นสตริงเพื่อให้ส่งกลับได้
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+
+
 // ดึงเลขหวยของงวดที่กำหนด
 app.get("/api/tickets/:roundId", async (req, res) => {
   try {

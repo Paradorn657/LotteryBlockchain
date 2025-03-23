@@ -9,11 +9,11 @@ const app = express();
 app.use(cors()); // เพื่อให้ Next.js เรียก API ได้
 app.use(express.json());
 
-const provider = new ethers.JsonRpcProvider("HTTP://192.168.1.106:8545"); // ใช้ Ganache หรือ Hardhat
-const contractAddress = "0xe9bDBd185277E92B4A2c22FADBbcc39547Ecc87c"; // ใส่ address ที่ deploy แล้ว
+const provider = new ethers.JsonRpcProvider("HTTP://192.168.1.105:8545"); // ใช้ Ganache หรือ Hardhat
+const contractAddress = "0xb6b0973076D85264c3c2D01C4ce1635D85cF4305"; // ใส่ address ที่ deploy แล้ว
 const lotteryABI = require("../contract/artifacts/contracts/Lottery.sol/Lottery.json").abi;
 //ใช้ private key เพื่อสร้าง wallet เอาไว้บอกเจ้าของ
-const wallet = new ethers.Wallet("0x75480e0a6f2c95804fdeaf4c8c751218e3f71e1745c64b7f661fab44597e0333", provider); // ใช้ private key ที่คุณมี
+const wallet = new ethers.Wallet("0x0408e7a87d1501b84f0fc225695ca4cf30d230b9e832897b66c955a759413bc3", provider); // ใช้ private key ที่คุณมี
 const lotteryContract = new ethers.Contract(contractAddress, lotteryABI, wallet);
 async function autoGenerateLottery() {
     try {
@@ -44,7 +44,7 @@ async function autoGenerateLottery() {
       round = await lotteryContract.getLatestRoundId(); // อัปเดตรอบใหม่หลังจากสร้าง
     }
   
-    cron.schedule("*/10 * * * *", async () => {
+    cron.schedule("*/1 * * * *", async () => {
       try {
         round = await lotteryContract.getLatestRoundId(); // ดึงรอบล่าสุดก่อนออกรางวัล
         console.log("กำลังออกรางวัล... งวดที่", round.toString());

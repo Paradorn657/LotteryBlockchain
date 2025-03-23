@@ -17,7 +17,7 @@ export async function getTickets(roundId: any) {
         .filter((ticket: { status: any; }) => !ticket.status) // คัดเฉพาะที่ยังไม่ได้ซื้อ
         .map((ticket: { number: any; }) => ticket.number);
 
-    return { singleTickets, pairTickets };
+    return { singleTickets, pairTickets, createdDate: data.createdDate };
 }
 
 export async function getLatestRound() {
@@ -26,8 +26,14 @@ export async function getLatestRound() {
     return data.roundId;
 }
 
-export async function getwinningNumber() {
+export async function getLastwinningNumber() {
     const res = await fetch(`http://localhost:5000/api/winning-numbers`);
+    const data = await res.json();
+    console.log(data);
+    return data;
+}
+export async function getwinningNumberById(roundId: number) {
+    const res = await fetch(`http://localhost:5000/api/winning-numbers/${roundId}`);
     const data = await res.json();
     console.log(data);
     return data;
@@ -52,9 +58,9 @@ export async function buyTicket(roundId: number, ticketNumber: number, buyerAddr
 }
 
 export default function Home() {
-    const [tickets, setTickets] = useState({ singleTickets: [], pairTickets: [] });
+    const [tickets, setTickets] = useState<{ singleTickets: string[], pairTickets: string[], createdDate?: string }>({ singleTickets: [], pairTickets: [] });
     const [roundId, setRoundId] = useState(null);
-    const [winningNumber, setWiningNumber] = useState(null);
+    const [winningNumber, setWiningNumber] = useState<{ createdDate: string; roundId: number; winningNumbers: string[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [buying, setBuying] = useState(false);
     const [buyerAddress, setBuyerAddress] = useState("");
@@ -65,11 +71,12 @@ export default function Home() {
             setLoading(true);
             try {
                 const latestRound = await getLatestRound();
-                const winningNumber = await getwinningNumber();
+                const winningNumber = await getLastwinningNumber();
                 console.log(winningNumber);
                 setWiningNumber(winningNumber);
                 setRoundId(latestRound);
                 const ticketData = await getTickets(latestRound);
+                console.log("ticketdata", ticketData);
                 setTickets(ticketData);
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -97,6 +104,7 @@ export default function Home() {
             });
             // Refresh ticket list after successful purchase
             const ticketData = await getTickets(roundId);
+            console.log(ticketData);
             setTickets(ticketData);
         } catch (error) {
             console.log(`Error purchasing ticket: ${error.message}`);
@@ -115,14 +123,13 @@ export default function Home() {
             <div className="container mx-auto px-4 py-8">
                 {/* Notification */}
                 {notification.show && (
-                    <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 flex items-center ${
-                        notification.type === "success" ? "bg-green-500" : "bg-red-500"
-                    } text-white`}>
+                    <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 flex items-center ${notification.type === "success" ? "bg-green-500" : "bg-red-500"
+                        } text-white`}>
                         <AlertCircle className="mr-2" />
                         <p>{notification.message}</p>
-                        <button 
-                            className="ml-4 text-white" 
-                            onClick={() => setNotification({...notification, show: false})}
+                        <button
+                            className="ml-4 text-white"
+                            onClick={() => setNotification({ ...notification, show: false })}
                         >
                             ✕
                         </button>
@@ -137,19 +144,26 @@ export default function Home() {
                     </p>
                 </div>
 
-                {/* Winning Numbers Section */}
+                Winning Numbers Section
                 {winningNumber && (
                     <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-yellow-400">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                                 <Trophy className="w-6 h-6 text-yellow-500 mr-2" />
-                                ผลการออกรางวัล
+                                <p>ผลการออกรางวัลงวดล่าสุดวันที่ {new Date(Number(winningNumber.createdDate) * 1000).toLocaleString("th-TH", {
+                                    day: "numeric",
+                                    month: "long",
+                                    year: "numeric",
+                                    hour: "numeric",
+                                    minute: "numeric",
+                                    second: "numeric",
+                                })}</p>
                             </h2>
                             <div className="bg-yellow-100 text-yellow-800 py-1 px-3 rounded-full text-sm font-medium">
                                 งวดที่ {winningNumber.roundId}
                             </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* First Prize */}
                             <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-lg p-4 shadow-md text-white">
@@ -163,7 +177,7 @@ export default function Home() {
                                     <p className="mt-2 text-sm">มูลค่ารางวัล 6,000,000 บาท</p>
                                 </div>
                             </div>
-                            
+
                             {/* Second Prize */}
                             <div className="bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg p-4 shadow-md">
                                 <div className="text-center">
@@ -176,7 +190,7 @@ export default function Home() {
                                     <p className="mt-2 text-sm text-gray-700">มูลค่ารางวัล 200,000 บาท</p>
                                 </div>
                             </div>
-                            
+
                             {/* Third Prize */}
                             <div className="bg-gradient-to-r from-amber-700 to-amber-600 rounded-lg p-4 shadow-md text-white">
                                 <div className="text-center">
@@ -200,7 +214,14 @@ export default function Home() {
                             <Calendar className="w-8 h-8 text-blue-500 mr-3" />
                             <div>
                                 <h2 className="text-2xl font-semibold text-gray-800">
-                                    งวดที่ {roundId}
+                                    งวดที่ {roundId} - วันที่ {new Date(Number(tickets.createdDate) * 1000).toLocaleString("th-TH", {
+                                        day: "numeric",
+                                        month: "long",
+                                        year: "numeric",
+                                        hour: "numeric",
+                                        minute: "numeric",
+                                        second: "numeric",
+                                    })}
                                 </h2>
                                 <p className="text-sm text-gray-500">
                                     วันที่ออกรางวัล: 16 มีนาคม 2568

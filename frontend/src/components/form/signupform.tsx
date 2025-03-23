@@ -7,6 +7,7 @@ import { useState } from "react";
 
 const FormSchema = z.object({
     username: z.string().min(1, "Username is requried").max(100),
+    // address: z.string().min(1, "Address is requried").max(100),
     email: z.string().min(1,"Email is required").email('invalid email'),
     password:z
         .string()
@@ -47,11 +48,12 @@ export default function SignUpForm() {
     const [username,setUsername] = useState("");
     const [email,setEmail] = useState("");
     const [password,setPassword] = useState("");
+    const [address,setAddress] = useState("")
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const validated = FormSchema.safeParse({ username, email, password });
+        const validated = FormSchema.safeParse({ username, email, password});
         if (!validated.success) {
             console.error(validated.error);
             return;
@@ -89,6 +91,20 @@ export default function SignUpForm() {
                             className="w-full mt-1 px-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
                         />
                     </div>
+                    {/* <div>
+                        <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                            Address
+                        </label>
+                        <input
+                            id="address"
+                            name="address"
+                            type="text"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            required
+                            className="w-full mt-1 px-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                        />
+                    </div> */}
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                             Email

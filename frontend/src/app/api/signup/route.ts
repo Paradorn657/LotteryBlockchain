@@ -7,7 +7,8 @@ import * as z from 'zod';
 const userSchema = z.object({
     username: z.string().min(1, "Username is requried").max(100),
     email: z.string().min(1,"Email is required").email('invalid email'),
-    password:z
+    // address: z.string().min(1, "Address is required"),
+    password: z
         .string()
         .min(1,'password is required')
         .min(8,'password must have than 8 characters'),
@@ -17,14 +18,16 @@ export async function POST(req: Request){
     try{
         const body = await req.json();
         const validated = userSchema.safeParse(body);
-
+        console.log(body)
         if(!validated.success){
             return NextResponse.json(
                 { user: null,message:"Invalid data"},
                 {status: 400}
             )
         }
-        const { email,username,password} = validated.data;
+        console.log("err 404")
+
+        const { email,username,password } = validated.data;
         console.log(body)
         const userExist = await prisma.user.findFirst({
             where: {
@@ -45,7 +48,7 @@ export async function POST(req: Request){
             name: username,
             email: email,
             password: hashpassword,
-            address: ''
+            address: ""
           }  
         })
         

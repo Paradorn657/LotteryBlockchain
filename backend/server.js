@@ -9,11 +9,11 @@ const app = express();
 app.use(cors()); // เพื่อให้ Next.js เรียก API ได้
 app.use(express.json());
 
-const provider = new ethers.JsonRpcProvider("http://127.0.0.1:7545"); // ใช้ Ganache หรือ Hardhat
-const contractAddress = "0x85BF69a81bdBdA7D8D000Bd2b201064444979D37"; // ใส่ address ที่ deploy แล้ว
+const provider = new ethers.JsonRpcProvider("HTTP://192.168.1.106:8545"); // ใช้ Ganache หรือ Hardhat
+const contractAddress = "0xe9bDBd185277E92B4A2c22FADBbcc39547Ecc87c"; // ใส่ address ที่ deploy แล้ว
 const lotteryABI = require("../contract/artifacts/contracts/Lottery.sol/Lottery.json").abi;
 //ใช้ private key เพื่อสร้าง wallet เอาไว้บอกเจ้าของ
-const wallet = new ethers.Wallet("0xd38ff8a71036c601691308593d9b2e2eabeba2186a63bf9d32020d07eeb4707d", provider); // ใช้ private key ที่คุณมี
+const wallet = new ethers.Wallet("0x75480e0a6f2c95804fdeaf4c8c751218e3f71e1745c64b7f661fab44597e0333", provider); // ใช้ private key ที่คุณมี
 const lotteryContract = new ethers.Contract(contractAddress, lotteryABI, wallet);
 async function autoGenerateLottery() {
     try {
@@ -125,11 +125,10 @@ app.get("/api/user-tickets/:userAddress", async (req, res) => {
     try {
       const { userAddress } = req.params;
       const userTickets = await lotteryContract.getAllUserTickets(userAddress);
-      console.log("userTickets: ", userTickets)
       // Convert BigInts to strings
       const formattedTickets = userTickets.map((entry) => ({
-        roundId: entry.roundId.toString(),
-        tickets: entry.tickets.map((ticket) => ticket.toString()),
+        roundId: entry[0].toString(),  // Extract roundId
+        tickets: entry[1].map((ticket) => ticket.toString()),  // Extract and convert tickets
       }));
       console.log("formattedTickets: ",formattedTickets)
   

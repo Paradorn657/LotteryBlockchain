@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/libs/auth";
 import Link from "next/link";
 import SignOut from "./signout";
+import ConnectWallet from "./connectWallet";
 
 export default async function Nav() {
     const session = await auth();
@@ -15,7 +16,6 @@ export default async function Nav() {
                     <a href="/home" className="text-xl font-black tracking-wider px-3 py-2 rounded-md hover:bg-blue-800/20 transition-colors">
                         หวยครัว
                     </a>
-
                     {/* Links on the left side next to "DOLLARS" */}
                     <ul className="hidden lg:flex items-center space-x-2">
                         <li>
@@ -46,6 +46,7 @@ export default async function Nav() {
                 </div>
 
                 <div className="navbar-end">
+                    <ConnectWallet />
                     {session?.user ? (
                         <div className="dropdown dropdown-end">
                             <div tabIndex={0} role="button" className="btn btn-ghost gap-2">

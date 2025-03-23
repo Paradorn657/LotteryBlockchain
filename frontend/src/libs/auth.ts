@@ -38,6 +38,7 @@ const authConfig: NextAuthConfig = {
                 try {
                     // Fetch user from the database
                     user = await prisma.user.findFirst({ where: { email } });
+                    console.log(user)
                 } catch (error) {
                     return null
                 }
@@ -45,8 +46,7 @@ const authConfig: NextAuthConfig = {
                 if (!user) {
                     return null
                 }
-                console.log(password)
-                console.log(user.password)
+
                 const matched = await verify(user.password, password);
                 // Compare password with the hashed password in the database
                 // const matched = await compare(password, user.password as string);
@@ -67,7 +67,7 @@ const authConfig: NextAuthConfig = {
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
-                token.role = user.address;
+                token.address = user.address;
             }
             return token;
         },

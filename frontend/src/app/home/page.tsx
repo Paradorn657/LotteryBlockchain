@@ -62,7 +62,7 @@ async function sendTransaction() {
         const signer = await provider.getSigner();
 
         const tx = await signer.sendTransaction({
-            to: "0x092A1889C04ffd33ad794241D26C2D5B209644a9",
+            to: "0x6EbfA865b873588f3E6bF3a5ADC0843cDd6968BA",
             value: ethers.parseEther("0.5"), // Convert ETH to Wei
         });
         // setStatus("Transaction sent! Waiting for confirmation...");

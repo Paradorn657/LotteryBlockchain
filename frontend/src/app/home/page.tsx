@@ -1,6 +1,8 @@
 "use client"
 import { useState, useEffect } from "react";
 import { Ticket, CircleDollarSign, Loader2, Trophy, Calendar, AlertCircle } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { ethers } from "ethers";
 
 export async function getTickets(roundId: any) {
     const res = await fetch(`http://localhost:5000/api/tickets/${roundId}`);
@@ -39,8 +41,45 @@ export async function getwinningNumberById(roundId: number) {
     return data;
 }
 
+async function sendTransaction() {
+    console.log("ส่ง")
+    if (!window.ethereum) {
+        alert("Please install MetaMask!");
+        return;
+    }
+
+    try {
+        console.log("wow")
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+
+        const tx = await signer.sendTransaction({
+            to: "0x22810915ec46eb0313Db6c48b6Df422070cfda4F",
+            value: ethers.parseEther("80"), // Convert ETH to Wei
+        });
+        // setStatus("Transaction sent! Waiting for confirmation...");
+        await tx.wait(); // Wait for transaction confirmation
+        // setStatus(`Transaction confirmed! Hash: ${tx.hash}`);
+        return {
+            status: "success",
+            hash: tx.hash
+        }
+    } catch (error) {
+        console.error(error);
+        return {
+            status: "failed"
+        }
+        // setStatus("Transaction failed!");
+    }
+}
+
 export async function buyTicket(roundId: number, ticketNumber: number, buyerAddress: string) {
-    buyerAddress = "0x9EF52e5b719d832F9aF3D3df7032bA4D1A9CE5Aa";
+    console.log("buyticket")
+    const result = await sendTransaction();
+    if (!result?.hash) {
+        return
+    }
+    
     const res = await fetch("http://localhost:5000/api/buy-tickets", {
         method: "POST",
         headers: {
@@ -65,6 +104,11 @@ export default function Home() {
     const [buying, setBuying] = useState(false);
     const [buyerAddress, setBuyerAddress] = useState("");
     const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+    const { data: session } = useSession();
+
+    useEffect(() => {
+        setBuyerAddress(session?.user.address || "")
+    }, [session])
 
     useEffect(() => {
         async function fetchData() {
@@ -93,6 +137,15 @@ export default function Home() {
     }, []);
 
     const handleBuyTicket = async (ticketNumber) => {
+        console.log(buyerAddress)
+        if (buyerAddress == "") {
+            setNotification({
+                show: true,
+                message: "เกิดข้อผิดพลาดในการซื้อสลาก กรุณาลองใหม่อีกครั้ง",
+                type: "error"
+            });
+            return
+        }
         setBuying(true);
         try {
             const txMessage = await buyTicket(roundId, ticketNumber, buyerAddress);
@@ -106,6 +159,8 @@ export default function Home() {
             const ticketData = await getTickets(roundId);
             console.log(ticketData);
             setTickets(ticketData);
+            // const ticketData = await getTickets(roundId);
+            // setTickets(ticketData);
         } catch (error) {
             console.log(`Error purchasing ticket: ${error.message}`);
             setNotification({

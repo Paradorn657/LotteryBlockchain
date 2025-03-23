@@ -11,13 +11,15 @@ app.use(express.json());
 
 const provider = new ethers.JsonRpcProvider("HTTP://127.0.0.1:7545"); // ใช้ Ganache หรือ Hardhat
 const contractAddress = "0x6C3508eDd3f666689073569bb1B98334188A41e0"; // ใส่ address ที่ deploy แล้ว
+const provider = new ethers.JsonRpcProvider("HTTP://127.0.0.1:7545"); // ใช้ Ganache หรือ Hardhat
+const contractAddress = "0xc6478288df57C55780c62998EC1864295f845156"; // ใส่ address ที่ deploy แล้ว
 const lotteryABI = require("../contract/artifacts/contracts/Lottery.sol/Lottery.json").abi;
 //ใช้ private key เพื่อสร้าง wallet เอาไว้บอกเจ้าของ
 const wallet = new ethers.Wallet("0xf08aa53e2c9c356f5031d712ec0e74006201c01902933a72084e7a5dd99e49a9", provider); // ใช้ private key ที่คุณมี
 const lotteryContract = new ethers.Contract(contractAddress, lotteryABI, wallet);
 async function autoGenerateLottery() {
     try {
-      const tx = await lotteryContract.generateLottery(10,10);
+      const tx = await lotteryContract.generateLottery(10,10 ,{ gasLimit: 5000000 });
       await tx.wait();
       console.log("Lottery round generated successfully!");
     } catch (error) {
@@ -27,7 +29,7 @@ async function autoGenerateLottery() {
 
   async function Prizedraw() {
     try {
-      const winNumber = await lotteryContract.drawWinners(lotteryContract.getLatestRoundId());
+      const winNumber = await lotteryContract.drawWinners(lotteryContract.getLatestRoundId(),{ gasLimit: 5000000 });
       await winNumber.wait();
       console.log("ออกรางวัลสำเร็จ!");
     } catch (error) {
@@ -68,27 +70,39 @@ async function autoGenerateLottery() {
 
   app.get("/api/winning-numbers", async (req, res) => {
     try {
+      // ดึง roundId จาก query string (ถ้าไม่มีให้ใช้ default เป็น previous round)
+      let { roundId } = req.query;
+      
       // ดึงรอบล่าสุดจาก contract
       const latestRoundId = await lotteryContract.getLatestRoundId();
-  
-      // ตรวจสอบว่า latestRoundId เป็น 0 หรือไม่ เพื่อหลีกเลี่ยงข้อผิดพลาด
       if (latestRoundId.toString() === "0") {
         return res.status(400).json({ error: "ยังไม่มีรอบหวย" });
       }
-  
-      // ดึงเลขรางวัลจากรอบที่แล้ว (previous round)
-      const previousRoundId = (BigInt(latestRoundId) - 1n).toString(); // ลดค่าของ roundId ลง 1
-      const winningNumbers = await lotteryContract.getWinningNumbers(previousRoundId);
-  
-      // ส่งข้อมูลเลขรางวัลกลับไป
+      
+      // ถ้าไม่ได้ส่ง roundId เข้ามา ให้ใช้ previous round (latestRoundId - 1)
+      if (!roundId) {
+        roundId = (BigInt(latestRoundId) - 1n).toString();
+      }
+      
+      // ดึงเลขรางวัลจากรอบที่เลือก
+      const winningNumbers = await lotteryContract.getWinningNumbers(roundId);
+      
+      // ดึงวันที่ที่สร้าง round นั้น (timestamp)
+      const createdDate = await lotteryContract.getDateRoundbyId(roundId);
+    
+      // ส่งข้อมูลกลับ
       res.json({
-        roundId: previousRoundId,
-        winningNumbers: winningNumbers.map(num => num.toString()), // แปลงค่าเป็นสตริงเพื่อให้ส่งกลับได้
+        roundId: roundId,
+        winningNumbers: winningNumbers.map(num => num.toString()),
+        createdDate: createdDate.toString() // timestamp ที่ได้จาก smart contract (Unix timestamp)
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   });
+  
+
+  
   
 
 
@@ -98,13 +112,16 @@ app.get("/api/tickets/:roundId", async (req, res) => {
     const { roundId } = req.params;
     
     const result = await lotteryContract.getTicketsByRound(roundId);
+    const createdDate = await lotteryContract.getDateRoundbyId(Number(roundId));
+
+    // console.log("createdDate: ", createdDate);
 
     const singleTickets = result[0].map(ticket => ticket.toString());
     const singleTicketStatus = result[1]; // เป็น boolean[]
     const pairTickets = result[2].map(ticket => ticket.toString());
     const pairTicketStatus = result[3]; // เป็น boolean[]
 
-    res.json({ roundId, singleTickets, singleTicketStatus, pairTickets, pairTicketStatus });
+    res.json({ roundId, singleTickets, singleTicketStatus, pairTickets, pairTicketStatus,createdDate:createdDate.toString() });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -6,7 +6,7 @@ contract Lottery {
     uint256 public roundId;
     uint256 public maxTicketsPerRound = 1000;
 
-     struct Ticket {
+    struct Ticket {
         uint256 ticketId;
         uint256 number;
     }
@@ -21,15 +21,14 @@ contract Lottery {
         uint256[] pairTickets;    // เก็บเลขหวยชุด (แต่ละชุดเก็บ entry เดียว)
         bool isDrawn;
         uint256[3] winningNumbers;
+        uint256 createdDate; // เพิ่มตัวแปรเก็บวันที่สร้าง round (block.timestamp)
     }
     // Mapping to store the user's ticket numbers per round
     mapping(address => mapping(uint256 => uint256[])) public userTickets;
     mapping(uint256 => Ticket) public tickets;
-
     mapping(uint256 => Round) public rounds;
     // Mapping สำหรับติดตามเลขที่ถูกซื้อในแต่ละงวด
     mapping(uint256 => mapping(uint256 => bool)) public purchasedTickets;
-
 
     event LotteryGenerated(uint256 roundId, uint256 totalEntries);
     event TicketBought(address indexed user, uint256 roundId, uint256 ticketNumber);
@@ -56,12 +55,13 @@ contract Lottery {
         
         roundId++;
         rounds[roundId].totalEntries = totalEntries;
-        
+        rounds[roundId].createdDate = block.timestamp; // บันทึกวันที่สร้าง round
+
         // สร้างหวยเดี่ยว
         for (uint256 i = 0; i < _singleTicketCount; i++) {
             uint256 ticketNumber = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, i))) % 999999 + 1;
             if (ticketNumber < 100000) {
-            ticketNumber = ticketNumber + 100000; // เติม 100000 เพื่อให้เป็นเลข 6 หลักเสมอ
+                ticketNumber = ticketNumber + 100000; // เติม 100000 เพื่อให้เป็นเลข 6 หลักเสมอ
             }
             purchasedTickets[roundId][ticketNumber] = false;
             rounds[roundId].singleTickets.push(ticketNumber);
@@ -71,7 +71,7 @@ contract Lottery {
         for (uint256 i = 0; i < _pairCount; i++) {
             uint256 ticketNumber = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, _singleTicketCount + i))) % 999999 + 1;
             if (ticketNumber < 100000) {
-            ticketNumber = ticketNumber + 100000; // เติม 100000 เพื่อให้เป็นเลข 6 หลักเสมอ
+                ticketNumber = ticketNumber + 100000; // เติม 100000 เพื่อให้เป็นเลข 6 หลักเสมอ
             }
             purchasedTickets[roundId][ticketNumber] = false;
             rounds[roundId].pairTickets.push(ticketNumber);
@@ -81,15 +81,11 @@ contract Lottery {
     }
 
     function buyTickets(address _user, uint256 _roundId, uint256[] calldata _ticketNumbers) external returns (uint256[] memory) {
-        // ตรวจสอบว่ารอบนี้มีอยู่จริงและยังไม่ได้จับรางวัล
         require(rounds[_roundId].totalEntries > 0, "Round does not exist");
         require(!rounds[_roundId].isDrawn, "This round has already been drawn");
         
-        
         for (uint256 i = 0; i < _ticketNumbers.length; i++) {
             uint256 ticketNumber = _ticketNumbers[i];
-            
-            // ตรวจสอบว่าเลขนี้มีในรอบนี้และยังไม่ถูกซื้อ
             bool ticketExists = false;
             
             // ตรวจสอบในหวยเดี่ยว
@@ -113,13 +109,9 @@ contract Lottery {
             require(ticketExists, "Ticket number not available in this round");
             require(!purchasedTickets[_roundId][ticketNumber], "Ticket already purchased");
             
-            // เปลี่ยนสถานะเลขหวย
             purchasedTickets[_roundId][ticketNumber] = true;
-            
-            // เพิ่มเลขหวยในรายการของผู้ใช้
             userTickets[_user][_roundId].push(ticketNumber);
             
-            // ส่ง event
             emit TicketBought(_user, _roundId, ticketNumber);
         }
         
@@ -127,9 +119,7 @@ contract Lottery {
     }
 
     function getAllUserTickets(address _user) external view returns (UserTickets[] memory) {
-        uint256 totalRounds = roundId; // จำนวนรอบทั้งหมด
-        
-        // นับจำนวนรอบที่ผู้ใช้มีการซื้อหวย
+        uint256 totalRounds = roundId;
         uint256 validRounds = 0;
         for (uint256 i = 1; i <= totalRounds; i++) {
             if (userTickets[_user][i].length > 0) {
@@ -137,12 +127,8 @@ contract Lottery {
             }
         }
         
-        // สร้าง array ที่มีขนาดพอดีกับจำนวนรอบที่มีการซื้อหวย
         UserTickets[] memory userTicketsArray = new UserTickets[](validRounds);
-        
         uint256 index = 0;
-        
-        // รวบรวมข้อมูลการซื้อหวยในแต่ละรอบ
         for (uint256 i = 1; i <= totalRounds; i++) {
             uint256[] memory ticketsInRound = userTickets[_user][i];
             if (ticketsInRound.length > 0) {
@@ -150,19 +136,13 @@ contract Lottery {
                 index++;
             }
         }
-        
         return userTicketsArray;
     }
 
-
-    /**
-     * @notice ดึงรายการ entry ทั้งหมด (หวยเดี่ยวและหวยชุด) เพื่อใช้สุ่มผู้ชนะ
-     */
     function _getCombinedEntries(uint256 _roundId) internal view returns (uint256[] memory) {
         uint256 total = rounds[_roundId].singleTickets.length + rounds[_roundId].pairTickets.length;
         uint256[] memory entries = new uint256[](total);
         uint256 index = 0;
-        
         for (uint256 i = 0; i < rounds[_roundId].singleTickets.length; i++) {
             entries[index] = rounds[_roundId].singleTickets[i];
             index++;
@@ -174,9 +154,6 @@ contract Lottery {
         return entries;
     }
     
-    /**
-     * @notice สุ่มประกาศรางวัล 3 รางวัล โดยใช้ entry ที่รวมหวยเดี่ยวและหวยชุดแล้ว
-     */
     function drawWinners(uint256 _roundId) external onlyOwner {
         require(rounds[_roundId].totalEntries > 0, "Round does not exist");
         require(!rounds[_roundId].isDrawn, "Winners already drawn");
@@ -209,7 +186,6 @@ contract Lottery {
         emit LotteryDrawn(_roundId, winningNumbers[0], winningNumbers[1], winningNumbers[2]);
     }
     
-    // ฟังก์ชันอ่านข้อมูลหวยเดี่ยวและหวยชุดแยกกัน
     function getTicketsByRound(uint256 _roundId) external view returns (
         uint256[] memory singleTickets, bool[] memory singleTicketStatus,
         uint256[] memory pairTickets, bool[] memory pairTicketStatus
@@ -238,5 +214,11 @@ contract Lottery {
     
     function getLatestRoundId() external view returns (uint256) {
         return roundId;
+    }
+
+    // ฟังก์ชัน getDateRoundbyId() คืนค่า timestamp ของวันที่สร้าง round นั้น
+    function getDateRoundbyId(uint256 _roundId) external view returns (uint256) {
+        require(rounds[_roundId].totalEntries > 0, "Round does not exist");
+        return rounds[_roundId].createdDate;
     }
 }

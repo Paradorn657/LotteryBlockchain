@@ -19,7 +19,7 @@ export async function getTickets(roundId: any) {
         .filter((ticket: { status: any; }) => !ticket.status) // คัดเฉพาะที่ยังไม่ได้ซื้อ
         .map((ticket: { number: any; }) => ticket.number);
 
-    return { singleTickets, pairTickets };
+    return { singleTickets, pairTickets, createdDate: data.createdDate };
 }
 
 export async function getLatestRound() {
@@ -28,8 +28,14 @@ export async function getLatestRound() {
     return data.roundId;
 }
 
-export async function getwinningNumber() {
+export async function getLastwinningNumber() {
     const res = await fetch(`http://localhost:5000/api/winning-numbers`);
+    const data = await res.json();
+    console.log(data);
+    return data;
+}
+export async function getwinningNumberById(roundId: number) {
+    const res = await fetch(`http://localhost:5000/api/winning-numbers/${roundId}`);
     const data = await res.json();
     console.log(data);
     return data;
@@ -99,9 +105,9 @@ export async function buyTicket(roundId: number, ticketNumber: number, buyerAddr
 }
 
 export default function Home() {
-    const [tickets, setTickets] = useState({ singleTickets: [], pairTickets: [] });
+    const [tickets, setTickets] = useState<{ singleTickets: string[], pairTickets: string[], createdDate?: string }>({ singleTickets: [], pairTickets: [] });
     const [roundId, setRoundId] = useState(null);
-    const [winningNumber, setWiningNumber] = useState(null);
+    const [winningNumber, setWiningNumber] = useState<{ createdDate: string; roundId: number; winningNumbers: string[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [buying, setBuying] = useState(false);
     const [buyerAddress, setBuyerAddress] = useState("");
@@ -118,11 +124,12 @@ export default function Home() {
             setLoading(true);
             try {
                 const latestRound = await getLatestRound();
-                const winningNumber = await getwinningNumber();
+                const winningNumber = await getLastwinningNumber();
                 console.log(winningNumber);
                 setWiningNumber(winningNumber);
                 setRoundId(latestRound);
                 const ticketData = await getTickets(latestRound);
+                console.log("ticketdata", ticketData);
                 setTickets(ticketData);
                 
                 // Fetch user tickets if session exists
@@ -211,13 +218,20 @@ export default function Home() {
                     </p>
                 </div>
 
-                {/* Winning Numbers Section */}
+                Winning Numbers Section
                 {winningNumber && (
                     <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-yellow-400">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                                 <Trophy className="w-6 h-6 text-yellow-500 mr-2" />
-                                ผลการออกรางวัล
+                                <p>ผลการออกรางวัลงวดล่าสุดวันที่ {new Date(Number(winningNumber.createdDate) * 1000).toLocaleString("th-TH", {
+                                    day: "numeric",
+                                    month: "long",
+                                    year: "numeric",
+                                    hour: "numeric",
+                                    minute: "numeric",
+                                    second: "numeric",
+                                })}</p>
                             </h2>
                             <div className="bg-yellow-100 text-yellow-800 py-1 px-3 rounded-full text-sm font-medium">
                                 งวดที่ {winningNumber.roundId}
@@ -319,7 +333,14 @@ export default function Home() {
                             <Calendar className="w-8 h-8 text-blue-500 mr-3" />
                             <div>
                                 <h2 className="text-2xl font-semibold text-gray-800">
-                                    งวดที่ {roundId}
+                                    งวดที่ {roundId} - วันที่ {new Date(Number(tickets.createdDate) * 1000).toLocaleString("th-TH", {
+                                        day: "numeric",
+                                        month: "long",
+                                        year: "numeric",
+                                        hour: "numeric",
+                                        minute: "numeric",
+                                        second: "numeric",
+                                    })}
                                 </h2>
                                 <p className="text-sm text-gray-500">
                                     วันที่ออกรางวัล: 16 มีนาคม 2568

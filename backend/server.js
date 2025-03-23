@@ -9,11 +9,11 @@ const app = express();
 app.use(cors()); // เพื่อให้ Next.js เรียก API ได้
 app.use(express.json());
 
-const provider = new ethers.JsonRpcProvider("HTTP://192.168.1.106:8545"); // ใช้ Ganache หรือ Hardhat
-const contractAddress = "0xe9bDBd185277E92B4A2c22FADBbcc39547Ecc87c"; // ใส่ address ที่ deploy แล้ว
+const provider = new ethers.JsonRpcProvider("HTTP://127.0.0.1:7545"); // ใช้ Ganache หรือ Hardhat
+const contractAddress = "0x6C3508eDd3f666689073569bb1B98334188A41e0"; // ใส่ address ที่ deploy แล้ว
 const lotteryABI = require("../contract/artifacts/contracts/Lottery.sol/Lottery.json").abi;
 //ใช้ private key เพื่อสร้าง wallet เอาไว้บอกเจ้าของ
-const wallet = new ethers.Wallet("0x75480e0a6f2c95804fdeaf4c8c751218e3f71e1745c64b7f661fab44597e0333", provider); // ใช้ private key ที่คุณมี
+const wallet = new ethers.Wallet("0xf08aa53e2c9c356f5031d712ec0e74006201c01902933a72084e7a5dd99e49a9", provider); // ใช้ private key ที่คุณมี
 const lotteryContract = new ethers.Contract(contractAddress, lotteryABI, wallet);
 async function autoGenerateLottery() {
     try {
@@ -44,7 +44,7 @@ async function autoGenerateLottery() {
       round = await lotteryContract.getLatestRoundId(); // อัปเดตรอบใหม่หลังจากสร้าง
     }
   
-    cron.schedule("*/10 * * * *", async () => {
+    cron.schedule("*/5 * * * *", async () => {
       try {
         round = await lotteryContract.getLatestRoundId(); // ดึงรอบล่าสุดก่อนออกรางวัล
         console.log("กำลังออกรางวัล... งวดที่", round.toString());
@@ -124,8 +124,11 @@ app.get("/api/latest-round", async (req, res) => {
 app.get("/api/user-tickets/:userAddress", async (req, res) => {
     try {
       const { userAddress } = req.params;
+      console.log(userAddress)
       const userTickets = await lotteryContract.getAllUserTickets(userAddress);
       // Convert BigInts to strings
+      console.log(userAddress)
+      console.log(userTickets)
       const formattedTickets = userTickets.map((entry) => ({
         roundId: entry[0].toString(),  // Extract roundId
         tickets: entry[1].map((ticket) => ticket.toString()),  // Extract and convert tickets

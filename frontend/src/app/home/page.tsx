@@ -35,6 +35,14 @@ export async function getwinningNumber() {
     return data;
 }
 
+export async function getUserTickets(userAddress) {
+    if (!userAddress) return [];
+    
+    const res = await fetch(`http://localhost:5000/api/user-tickets/${userAddress}`);
+    const data = await res.json();
+    return data.tickets || [];
+}
+
 async function sendTransaction() {
     console.log("ส่ง")
     if (!window.ethereum) {
@@ -48,8 +56,8 @@ async function sendTransaction() {
         const signer = await provider.getSigner();
 
         const tx = await signer.sendTransaction({
-            to: "0x22810915ec46eb0313Db6c48b6Df422070cfda4F",
-            value: ethers.parseEther("80"), // Convert ETH to Wei
+            to: "0x092A1889C04ffd33ad794241D26C2D5B209644a9",
+            value: ethers.parseEther("0.5"), // Convert ETH to Wei
         });
         // setStatus("Transaction sent! Waiting for confirmation...");
         await tx.wait(); // Wait for transaction confirmation
@@ -98,6 +106,7 @@ export default function Home() {
     const [buying, setBuying] = useState(false);
     const [buyerAddress, setBuyerAddress] = useState("");
     const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+    const [userTickets, setUserTickets] = useState([]);
     const { data: session } = useSession();
 
     useEffect(() => {
@@ -115,6 +124,12 @@ export default function Home() {
                 setRoundId(latestRound);
                 const ticketData = await getTickets(latestRound);
                 setTickets(ticketData);
+                
+                // Fetch user tickets if session exists
+                if (session?.user?.address) {
+                    const userTicketsData = await getUserTickets(session.user.address);
+                    setUserTickets(userTicketsData);
+                }
             } catch (error) {
                 console.error("Error fetching data:", error);
                 setNotification({
@@ -127,7 +142,7 @@ export default function Home() {
             }
         }
         fetchData();
-    }, []);
+    }, [session?.user?.address]);
 
     const handleBuyTicket = async (ticketNumber) => {
         console.log(buyerAddress)
@@ -148,9 +163,16 @@ export default function Home() {
                 message: "ซื้อสลากเรียบร้อยแล้ว!",
                 type: "success"
             });
-            // Refresh ticket list after successful purchase
-            // const ticketData = await getTickets(roundId);
-            // setTickets(ticketData);
+            
+            // Refresh user tickets after successful purchase
+            if (session?.user?.address) {
+                const userTicketsData = await getUserTickets(session.user.address);
+                setUserTickets(userTicketsData);
+            }
+            
+            // Refresh available tickets after successful purchase
+            const ticketData = await getTickets(roundId);
+            setTickets(ticketData);
         } catch (error) {
             console.log(`Error purchasing ticket: ${error.message}`);
             setNotification({
@@ -242,6 +264,51 @@ export default function Home() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* User Tickets section */}
+                {session?.user && userTickets.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-purple-500">
+                        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <Ticket className="w-5 h-5 text-purple-500 mr-2" />
+                            สลากที่คุณซื้อไว้
+                        </h2>
+                        
+                        {userTickets.map((roundTickets, index) => (
+                            <div key={`round-${index}`} className="mb-6">
+                                <h3 className="text-lg font-medium text-gray-700 mb-4 border-l-4 border-purple-500 pl-3">
+                                    งวดที่ {roundTickets.roundId}
+                                </h3>
+                                
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    {roundTickets.tickets.map((ticket, ticketIndex) => (
+                                        <div
+                                            key={`user-ticket-${ticketIndex}`}
+                                            className="bg-gradient-to-b from-white to-purple-50 border border-purple-200 rounded-xl p-4 text-center"
+                                        >
+                                            <div className="flex justify-between mb-2 text-xs text-gray-500">
+                                                <span>สำนักงานสลากฯ</span>
+                                                <span>80 บาท</span>
+                                            </div>
+                                            
+                                            <div className="bg-white p-3 rounded-lg shadow-inner mb-3">
+                                                <p className="text-3xl font-bold text-purple-700 tracking-wider">
+                                                    {ticket}
+                                                </p>
+                                            </div>
+                                            
+                                            {/* Check if ticket is a winner */}
+                                            {winningNumber && winningNumber.winningNumbers.includes(ticket) && (
+                                                <div className="bg-yellow-100 text-yellow-800 py-1 px-3 rounded-full text-sm font-medium mt-2">
+                                                    ถูกรางวัล!
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
 

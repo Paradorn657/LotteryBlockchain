@@ -7,7 +7,7 @@ import * as z from 'zod';
 const userSchema = z.object({
     username: z.string().min(1, "Username is requried").max(100),
     email: z.string().min(1,"Email is required").email('invalid email'),
-    address: z.string().min(1, "Address is required"),
+    // address: z.string().min(1, "Address is required"),
     password: z
         .string()
         .min(1,'password is required')
@@ -27,7 +27,7 @@ export async function POST(req: Request){
         }
         console.log("err 404")
 
-        const { email,username,password,address } = validated.data;
+        const { email,username,password } = validated.data;
         console.log(body)
         const userExist = await prisma.user.findFirst({
             where: {
@@ -48,7 +48,7 @@ export async function POST(req: Request){
             name: username,
             email: email,
             password: hashpassword,
-            address: address
+            address: ""
           }  
         })
         

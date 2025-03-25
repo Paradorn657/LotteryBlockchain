@@ -19,7 +19,7 @@ export async function getTickets(roundId: any) {
         .filter((ticket: { status: any; }) => !ticket.status) // คัดเฉพาะที่ยังไม่ได้ซื้อ
         .map((ticket: { number: any; }) => ticket.number);
 
-    return { singleTickets, pairTickets };
+    return { singleTickets, pairTickets, createdDate: data.createdDate };
 }
 
 export async function getLatestRound() {
@@ -28,11 +28,25 @@ export async function getLatestRound() {
     return data.roundId;
 }
 
-export async function getwinningNumber() {
+export async function getLastwinningNumber() {
     const res = await fetch(`http://localhost:5000/api/winning-numbers`);
     const data = await res.json();
     console.log(data);
     return data;
+}
+export async function getwinningNumberById(roundId: number) {
+    const res = await fetch(`http://localhost:5000/api/winning-numbers/${roundId}`);
+    const data = await res.json();
+    console.log(data);
+    return data;
+}
+
+export async function getUserTickets(userAddress) {
+    if (!userAddress) return [];
+    
+    const res = await fetch(`http://localhost:5000/api/user-tickets/${userAddress}`);
+    const data = await res.json();
+    return data.tickets || [];
 }
 
 async function sendTransaction() {
@@ -48,8 +62,8 @@ async function sendTransaction() {
         const signer = await provider.getSigner();
 
         const tx = await signer.sendTransaction({
-            to: "0x22810915ec46eb0313Db6c48b6Df422070cfda4F",
-            value: ethers.parseEther("80"), // Convert ETH to Wei
+            to: "0x6EbfA865b873588f3E6bF3a5ADC0843cDd6968BA",
+            value: ethers.parseEther("0.5"), // Convert ETH to Wei
         });
         // setStatus("Transaction sent! Waiting for confirmation...");
         await tx.wait(); // Wait for transaction confirmation
@@ -91,13 +105,14 @@ export async function buyTicket(roundId: number, ticketNumber: number, buyerAddr
 }
 
 export default function Home() {
-    const [tickets, setTickets] = useState({ singleTickets: [], pairTickets: [] });
+    const [tickets, setTickets] = useState<{ singleTickets: string[], pairTickets: string[], createdDate?: string }>({ singleTickets: [], pairTickets: [] });
     const [roundId, setRoundId] = useState(null);
-    const [winningNumber, setWiningNumber] = useState(null);
+    const [winningNumber, setWiningNumber] = useState<{ createdDate: string; roundId: number; winningNumbers: string[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [buying, setBuying] = useState(false);
     const [buyerAddress, setBuyerAddress] = useState("");
     const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+    const [userTickets, setUserTickets] = useState([]);
     const { data: session } = useSession();
 
     useEffect(() => {
@@ -109,12 +124,19 @@ export default function Home() {
             setLoading(true);
             try {
                 const latestRound = await getLatestRound();
-                const winningNumber = await getwinningNumber();
+                const winningNumber = await getLastwinningNumber();
                 console.log(winningNumber);
                 setWiningNumber(winningNumber);
                 setRoundId(latestRound);
                 const ticketData = await getTickets(latestRound);
+                console.log("ticketdata", ticketData);
                 setTickets(ticketData);
+                
+                // Fetch user tickets if session exists
+                if (session?.user?.address) {
+                    const userTicketsData = await getUserTickets(session.user.address);
+                    setUserTickets(userTicketsData);
+                }
             } catch (error) {
                 console.error("Error fetching data:", error);
                 setNotification({
@@ -127,7 +149,7 @@ export default function Home() {
             }
         }
         fetchData();
-    }, []);
+    }, [session?.user?.address]);
 
     const handleBuyTicket = async (ticketNumber) => {
         console.log(buyerAddress)
@@ -148,9 +170,16 @@ export default function Home() {
                 message: "ซื้อสลากเรียบร้อยแล้ว!",
                 type: "success"
             });
-            // Refresh ticket list after successful purchase
-            // const ticketData = await getTickets(roundId);
-            // setTickets(ticketData);
+            
+            // Refresh user tickets after successful purchase
+            if (session?.user?.address) {
+                const userTicketsData = await getUserTickets(session.user.address);
+                setUserTickets(userTicketsData);
+            }
+            
+            // Refresh available tickets after successful purchase
+            const ticketData = await getTickets(roundId);
+            setTickets(ticketData);
         } catch (error) {
             console.log(`Error purchasing ticket: ${error.message}`);
             setNotification({
@@ -189,13 +218,20 @@ export default function Home() {
                     </p>
                 </div>
 
-                {/* Winning Numbers Section */}
+                Winning Numbers Section
                 {winningNumber && (
                     <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-yellow-400">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                                 <Trophy className="w-6 h-6 text-yellow-500 mr-2" />
-                                ผลการออกรางวัล
+                                <p>ผลการออกรางวัลงวดล่าสุดวันที่ {new Date(Number(winningNumber.createdDate) * 1000).toLocaleString("th-TH", {
+                                    day: "numeric",
+                                    month: "long",
+                                    year: "numeric",
+                                    hour: "numeric",
+                                    minute: "numeric",
+                                    second: "numeric",
+                                })}</p>
                             </h2>
                             <div className="bg-yellow-100 text-yellow-800 py-1 px-3 rounded-full text-sm font-medium">
                                 งวดที่ {winningNumber.roundId}
@@ -245,6 +281,51 @@ export default function Home() {
                     </div>
                 )}
 
+                {/* User Tickets section */}
+                {session?.user && userTickets.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-purple-500">
+                        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <Ticket className="w-5 h-5 text-purple-500 mr-2" />
+                            สลากที่คุณซื้อไว้
+                        </h2>
+                        
+                        {userTickets.map((roundTickets, index) => (
+                            <div key={`round-${index}`} className="mb-6">
+                                <h3 className="text-lg font-medium text-gray-700 mb-4 border-l-4 border-purple-500 pl-3">
+                                    งวดที่ {roundTickets.roundId}
+                                </h3>
+                                
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    {roundTickets.tickets.map((ticket, ticketIndex) => (
+                                        <div
+                                            key={`user-ticket-${ticketIndex}`}
+                                            className="bg-gradient-to-b from-white to-purple-50 border border-purple-200 rounded-xl p-4 text-center"
+                                        >
+                                            <div className="flex justify-between mb-2 text-xs text-gray-500">
+                                                <span>สำนักงานสลากฯ</span>
+                                                <span>80 บาท</span>
+                                            </div>
+                                            
+                                            <div className="bg-white p-3 rounded-lg shadow-inner mb-3">
+                                                <p className="text-3xl font-bold text-purple-700 tracking-wider">
+                                                    {ticket}
+                                                </p>
+                                            </div>
+                                            
+                                            {/* Check if ticket is a winner */}
+                                            {winningNumber && winningNumber.winningNumbers.includes(ticket) && (
+                                                <div className="bg-yellow-100 text-yellow-800 py-1 px-3 rounded-full text-sm font-medium mt-2">
+                                                    ถูกรางวัล!
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {/* Round info card */}
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-blue-500">
                     <div className="flex items-center justify-between">
@@ -252,7 +333,14 @@ export default function Home() {
                             <Calendar className="w-8 h-8 text-blue-500 mr-3" />
                             <div>
                                 <h2 className="text-2xl font-semibold text-gray-800">
-                                    งวดที่ {roundId}
+                                    งวดที่ {roundId} - วันที่ {new Date(Number(tickets.createdDate) * 1000).toLocaleString("th-TH", {
+                                        day: "numeric",
+                                        month: "long",
+                                        year: "numeric",
+                                        hour: "numeric",
+                                        minute: "numeric",
+                                        second: "numeric",
+                                    })}
                                 </h2>
                                 <p className="text-sm text-gray-500">
                                     วันที่ออกรางวัล: 16 มีนาคม 2568

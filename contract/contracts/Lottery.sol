@@ -10,12 +10,33 @@ contract Lottery {
         uint256 ticketId;
         uint256 number;
     }
+
     struct UserTickets {
         uint256 roundId;
         uint256[] singleTickets;
         uint256[] pairTickets;
     }
-    
+    struct UserWinning {
+        uint256 roundId;
+        uint256 ticketNumber;
+        uint256 prizeRank; // 0 = First Prize, 1 = Second Prize, 2 = Third Prize
+    }
+
+    struct ClaimResult {
+        address user;
+        uint256 roundId;
+        uint256 ticketNumber;
+        string ticketType;
+        uint256 prizeRank; // 0 = First Prize, 1 = Second Prize, 2 = Third Prize
+    }
+    mapping(address => UserWinning[]) public userWinnings;
+    event UserWon(
+        address indexed user,
+        uint256 roundId,
+        uint256 ticketNumber,
+        uint256 prizeRank
+    );
+
     struct Round {
         uint256 totalEntries; // จำนวน entry ทั้งหมด = จำนวนหวยเดี่ยว + จำนวนหวยชุด
         uint256[] singleTickets; // เก็บเลขหวยเดี่ยว (แต่ละใบเป็น entry หนึ่ง)
@@ -34,8 +55,6 @@ contract Lottery {
     mapping(uint256 => address[]) public roundUsers; // Track users per round
     mapping(uint256 => mapping(address => bool)) public userInRound; // Quick lookup if user is in round
 
-    mapping(uint256 => address[]) public roundUsers;  // Track users per round
-    mapping(uint256 => mapping(address => bool)) public userInRound;  // Quick lookup if user is in round
 
     event LotteryGenerated(uint256 roundId, uint256 totalEntries);
     event TicketBought(
@@ -119,7 +138,10 @@ contract Lottery {
     ) external returns (uint256[] memory) {
         require(rounds[_roundId].totalEntries > 0, "Round does not exist");
         require(!rounds[_roundId].isDrawn, "This round has already been drawn");
-        
+
+        // Track if this is the first ticket for this user in this round
+        bool isFirstTicketForUser = userTickets[_user][_roundId].length == 0;
+
         for (uint256 i = 0; i < _ticketNumbers.length; i++) {
             uint256 ticketNumber = _ticketNumbers[i];
             bool ticketExists = false;
@@ -173,23 +195,6 @@ contract Lottery {
         return userTickets[_user][_roundId];
     }
 
-    function getUsersInRound(uint256 _roundId) external view returns (address[] memory) {
-        return roundUsers[_roundId];
-    }
-
-    // New function to check if a user is in a specific round
-    function isUserInRound(uint256 _roundId, address _user) external view returns (bool) {
-        return userInRound[_roundId][_user];
-    }
-
-    function getUsersInRound(uint256 _roundId) external view returns (address[] memory) {
-        return roundUsers[_roundId];
-    }
-
-    // New function to check if a user is in a specific round
-    function isUserInRound(uint256 _roundId, address _user) external view returns (bool) {
-        return userInRound[_roundId][_user];
-    }
 
     function getUsersInRound(
         uint256 _roundId
@@ -321,7 +326,7 @@ contract Lottery {
         require(entries.length >= 3, "Not enough entries to draw");
 
         uint256[3] memory generatedWinningNumbers;
-        uint256[3] memory generatedWinningNumbers;
+
         uint256 randomIndex;
 
         // 1st Prize
@@ -428,15 +433,6 @@ contract Lottery {
         return allClaimResults;
     }
 
-    function isInArray(uint256[] memory arr, uint256 value) internal pure returns (bool) {
-        for (uint256 i = 0; i < arr.length; i++) {
-            if (arr[i] == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     function isInArray(
         uint256[] memory arr,
         uint256 value
@@ -497,16 +493,6 @@ contract Lottery {
     ) external view returns (uint256) {
         require(rounds[_roundId].totalEntries > 0, "Round does not exist");
         return rounds[_roundId].createdDate;
-    }
-    function getUserForTickets(uint256 _roundId) internal view returns (address) {
-        // Placeholder implementation - replace with actual logic to find a user who bought tickets in a round
-        // This might require additional tracking in your buyTickets function
-        for (address user = address(1); user < address(type(uint160).max); user = address(uint160(uint256(uint160(user)) + 1))) {
-            if (userTickets[user][_roundId].length > 0) {
-                return user;
-            }
-        }
-        return address(0);
     }
     function getUserWinningCount(address _user) external view returns (uint256) {
         return userWinnings[_user].length;
@@ -668,22 +654,6 @@ contract Lottery {
         return "Unknown";
     }
 
-    // Helper function to check prize status
-    function _checkPrizeStatus(
-        uint256 _roundId, 
-        uint256 _ticketNumber, 
-        uint256[3] memory _winningNumbers
-    ) internal pure returns (string memory) {
-        if (_ticketNumber == _winningNumbers[0]) {
-            return "FIRST PRIZE";
-        } else if (_ticketNumber == _winningNumbers[1]) {
-            return "SECOND PRIZE";
-        } else if (_ticketNumber == _winningNumbers[2]) {
-            return "THIRD PRIZE";
-        }
-        
-        return "No Prize";
-    }
     // Helper function to convert uint to string
     function _toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {
@@ -798,15 +768,6 @@ contract Lottery {
         return false;
     }
 
-    // Internal function to check if ticket is in single tickets
-    function _isInSingleTickets(uint256 _roundId, uint256 _ticketNumber) internal view returns (bool) {
-        for (uint256 i = 0; i < rounds[_roundId].singleTickets.length; i++) {
-            if (rounds[_roundId].singleTickets[i] == _ticketNumber) {
-                return true;
-            }
-        }
-        return false;
-    }
     function getUserForTickets(
         uint256 _roundId
     ) internal view returns (address) {

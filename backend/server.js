@@ -44,7 +44,7 @@ async function autoGenerateLottery() {
       round = await lotteryContract.getLatestRoundId(); // อัปเดตรอบใหม่หลังจากสร้าง
     }
   
-    cron.schedule("*/5 * * * *", async () => {
+    cron.schedule("*/1 * * * *", async () => {
       try {
         round = await lotteryContract.getLatestRoundId(); // ดึงรอบล่าสุดก่อนออกรางวัล
         console.log("กำลังออกรางวัล... งวดที่", round.toString());
@@ -55,6 +55,17 @@ async function autoGenerateLottery() {
   
         console.log("กำลังสร้างรอบหวยใหม่...");
         await autoGenerateLottery();
+
+        // Get round results
+        const roundResults = await lotteryContract.printRoundResults(round-1);
+        const winners = extractWinners(roundResults);
+
+        let transactions = [];
+        if (Object.keys(winners).length > 0) {
+            transactions = await sendPrize(winners);
+        }
+
+
       } catch (error) {
         console.error("Error in cron job:", error);
       }
@@ -159,6 +170,105 @@ app.get("/api/user-tickets/:userAddress", async (req, res) => {
     }
   });
 
+  const PRIZES = {
+    "FIRST PRIZE": ethers.parseEther("10"), // 10 ETH
+    "SECOND PRIZE": ethers.parseEther("5"),  // 5 ETH
+    "THIRD PRIZE": ethers.parseEther("1")   // 1 ETH
+};
+
+// Function to extract winners and their prize amounts
+function extractWinners(resultsString) {
+    const users = resultsString.split("\n\nUser ");
+    const winningNumbersMatch = resultsString.match(/Winning Numbers: ([\d, ]+)/);
+
+    if (!winningNumbersMatch) return [];
+    
+    const winningNumbers = new Set(winningNumbersMatch[1].split(", ").map(Number));
+    const winners = {};
+
+    for (const user of users) {
+        const addressMatch = user.match(/(0x[a-fA-F0-9]{40})/);
+        if (!addressMatch) continue;
+
+        const address = addressMatch[1];
+        let totalPrize = ethers.parseEther("0");
+        let lines = user.split("\n");
+
+        for (const line of lines) {
+            const ticketMatch = line.match(/Ticket (\d+)/);
+            const prizeMatch = line.match(/- (.+)$/);
+            const isPairTicket = line.includes("(Pair Ticket)");
+
+            if (ticketMatch && prizeMatch) {
+                const ticketNumber = parseInt(ticketMatch[1], 10);
+                const prizeType = prizeMatch[1];
+
+                if (winningNumbers.has(ticketNumber) && PRIZES[prizeType]) {
+                    let prizeAmount = PRIZES[prizeType];
+
+                    if (isPairTicket) {
+                        prizeAmount = prizeAmount * BigInt(2); // Double the prize for Pair Tickets
+                    }
+
+                    totalPrize += prizeAmount;
+                }
+            }
+        }
+
+        if (totalPrize > 0) {
+            winners[address] = (winners[address] || ethers.parseEther("0")) + totalPrize;
+        }
+    }
+
+    return winners;
+}
+
+// Function to send Ether to winners
+async function sendPrize(winners) {
+    let transactions = [];
+
+    for (const [address, prizeAmount] of Object.entries(winners)) {
+        try {
+            const tx = await wallet.sendTransaction({
+                to: address,
+                value: prizeAmount,
+                gasLimit: 21000
+            });
+
+            console.log(`✅ Sent ${ethers.formatEther(prizeAmount)} ETH to ${address}: ${tx.hash}`);
+            transactions.push({ address, txHash: tx.hash, amount: ethers.formatEther(prizeAmount) });
+        } catch (error) {
+            console.error(`❌ Failed to send to ${address}: ${error.message}`);
+        }
+    }
+
+    return transactions;
+}
+
+// API route to get winners & transfer money
+app.get("/api/get-winner", async (req, res) => {
+    try {
+        let { roundId } = req.query;
+
+        // Get round results
+        const roundResults = await lotteryContract.printRoundResults(roundId);
+        const winners = extractWinners(roundResults);
+
+        let transactions = [];
+        if (Object.keys(winners).length > 0) {
+            transactions = await sendPrize(winners);
+        }
+
+        res.json({ 
+            message: "Round results retrieved successfully",
+            results: roundResults,
+            winners,
+            transactions
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 app.post("/api/buy-tickets", async (req, res) => {
     try {
       let { userAddress, roundId, ticketNumbers } = req.body;

@@ -1,5 +1,5 @@
 "use client";
-import { Calendar, Clock, Info, Medal, Trophy } from "lucide-react";
+import { Calendar, Clock, Info, Medal, Trophy, Users, Ticket, Award } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export async function getLatestRound() {
@@ -16,7 +16,6 @@ export async function getLatestRound() {
 
 export async function getwinningNumberById(roundId) {
     try {
-        // ใช้ URL ที่ถูกต้องตามที่กำหนดในโค้ด API ของคุณ
         const res = await fetch(`http://localhost:5000/api/winning-numbers?roundId=${roundId}`);
         if (!res.ok) throw new Error(`API request failed with status ${res.status}`);
         const data = await res.json();
@@ -27,20 +26,87 @@ export async function getwinningNumberById(roundId) {
     }
 }
 
+function parseLotteryResults(resultsString) {
+    try {
+        const roundMatch = resultsString.match(/Lottery Round (\d+) Results:/);
+        const winningNumbersMatch = resultsString.match(/Winning Numbers: ([\d,\s]+)/);
+        const userAddressMatch = resultsString.match(/User (0x[a-fA-F0-9]+):/);
+        const participantsMatch = resultsString.match(/Total Participating Users: (\d+)/);
+        const ticketsMatch = resultsString.match(/Total Tickets Sold: (\d+)/);
+        const winningTicketsMatch = resultsString.match(/Total Winning Tickets: (\d+)/);
+
+        if (!roundMatch || !winningNumbersMatch) return null;
+
+        const participants = [];
+        const userSection = resultsString.split(/User 0x[a-fA-F0-9]+:/)[1];
+        
+        const userTickets = [];
+        const ticketMatches = userSection.match(/Ticket \d+ \(.*?\) - .*?\n/g) || [];
+        
+        ticketMatches.forEach(ticketLine => {
+            const ticketNumberMatch = ticketLine.match(/Ticket (\d+)/);
+            const ticketTypeMatch = ticketLine.match(/\((.*?)\)/);
+            const prizeMatch = ticketLine.match(/- (.*?)$/);
+            
+            if (ticketNumberMatch && ticketTypeMatch && prizeMatch) {
+                userTickets.push({
+                    number: parseInt(ticketNumberMatch[1], 10),
+                    type: ticketTypeMatch[1],
+                    prize: prizeMatch[1]
+                });
+            }
+        });
+
+        return {
+            roundNumber: parseInt(roundMatch[1], 10),
+            winningNumbers: winningNumbersMatch[1].split(',').map(n => parseInt(n.trim(), 10)),
+            participants: [{
+                address: userAddressMatch ? userAddressMatch[1] : null,
+                tickets: userTickets,
+                totalTickets: userTickets.length,
+                winningTickets: userTickets.filter(ticket => ticket.prize !== 'No Prize').length
+            }],
+            summary: {
+                totalParticipatingUsers: participantsMatch ? parseInt(participantsMatch[1], 10) : 0,
+                totalTicketsSold: ticketsMatch ? parseInt(ticketsMatch[1], 10) : 0,
+                totalWinningTickets: winningTicketsMatch ? parseInt(winningTicketsMatch[1], 10) : 0
+            }
+        };
+    } catch (error) {
+        console.error("Error parsing lottery results:", error);
+        return null;
+    }
+}
+
+
+function extractWinners(resultsString: string) {
+    const parsedResults = parseLotteryResults(resultsString);
+    
+    if (!parsedResults) return "No winners in this round.";
+
+    const winners = parsedResults.participants
+        .filter(participant => participant.winningTickets > 0)
+        .map(participant => ({
+            address: participant.address,
+            winningTickets: participant.winningTickets
+        }));
+
+    return winners.length > 0 ? winners : "No winners in this round.";
+}
+
 export default function LotteryHistoryPage() {
     const [latestRound, setLatestRound] = useState(0);
     const [selectedRound, setSelectedRound] = useState(0);
     const [winningNumber, setWinningNumber] = useState(null);
+    const [winnerData, setWinnerData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        // Fetch the latest round when component mounts
         const fetchLatestRound = async () => {
             try {
                 const roundId = await getLatestRound();
                 setLatestRound(roundId);
-                // ถ้าเป็นรอบแรก ควรเลือกรอบล่าสุด หรือล่าสุด - 1 ถ้ารอบล่าสุดยังไม่มีผล
                 setSelectedRound(roundId > 1 ? roundId - 1 : roundId);
                 setError(null);
             } catch (error) {
@@ -54,8 +120,7 @@ export default function LotteryHistoryPage() {
     }, []);
 
     useEffect(() => {
-        // Fetch winning numbers when selectedRound changes
-        const fetchWinningNumbers = async () => {
+        const fetchWinningNumbersAndWinner = async () => {
             if (selectedRound > 0) {
                 setLoading(true);
                 setError(null);
@@ -64,23 +129,23 @@ export default function LotteryHistoryPage() {
 
                     setWinningNumber(result);
                 } catch (error) {
-                    console.error("Error fetching winning numbers:", error);
+                    console.error("Error fetching data:", error);
                     setError(`ไม่สามารถโหลดข้อมูลรางวัลงวดที่ ${selectedRound} ได้`);
                     setWinningNumber(null);
+                    setWinnerData(null);
                 } finally {
                     setLoading(false);
                 }
             }
         };
 
-        fetchWinningNumbers();
+        fetchWinningNumbersAndWinner();
     }, [selectedRound]);
 
     const handleRoundChange = (e) => {
         setSelectedRound(parseInt(e.target.value));
     };
 
-    // ป้องกันกรณีที่ยังไม่มีข้อมูลรอบ
     const roundOptions = latestRound > 1
         ? Array.from({ length: latestRound - 1 }, (_, i) => latestRound - 1 - i)
         : [];
@@ -165,7 +230,6 @@ export default function LotteryHistoryPage() {
                                     </span>
                                 </div>
                                 <div className="flex items-center">
-
                                     <Clock className="w-5 h-5 mr-2" />
                                     <span className="font-medium">
                                         {new Date(Number(winningNumber.createdDate) * 1000).toLocaleString("th-TH", {
@@ -260,6 +324,84 @@ export default function LotteryHistoryPage() {
                     <p className="mt-2 text-gray-500">กรุณาเลือกงวดอื่น หรือลองใหม่อีกครั้งในภายหลัง</p>
                 </div>
             ) : null}
+
+            {/* Winner Details Section */}
+            {!loading && winnerData && (
+                <div className="mt-8 bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                    <div className="bg-gradient-to-r from-green-500 to-teal-500 p-5 text-white">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                            <div className="flex items-center">
+                                <Trophy className="w-6 h-6 mr-3" />
+                                <h2 className="text-xl md:text-2xl font-bold">ผลผู้ชนะรางวัล</h2>
+                            </div>
+                            <div className="bg-white text-green-800 py-1 px-4 rounded-full text-sm font-bold">
+                                งวดที่ {winnerData.roundNumber}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 grid md:grid-cols-2 gap-6">
+                        {/* Winning Numbers */}
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <h3 className="text-lg font-semibold text-green-800 mb-3 flex items-center">
+                                <Award className="mr-2 w-5 h-5 text-green-600" />
+                                หมายเลขรางวัล
+                            </h3>
+                            <div className="flex justify-center space-x-4">
+                                {winnerData.winningNumbers.map((number, index) => (
+                                    <div 
+                                        key={index} 
+                                        className="bg-white p-3 rounded-lg shadow-md border border-green-300 text-xl font-bold text-green-700"
+                                    >
+                                        {number}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Participant Details */}
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h3 className="text-lg font-semibold text-blue-800 mb-3 flex items-center">
+                                <Users className="mr-2 w-5 h-5 text-blue-600" />
+                                รายละเอียดผู้เข้าร่วม
+                            </h3>
+                            <div className="space-y-2 text-blue-700">
+                                <p>จำนวนผู้เข้าร่วม: {winnerData.summary.totalParticipatingUsers}</p>
+                                <p>จำนวนตั๋วทั้งหมด: {winnerData.summary.totalTicketsSold}</p>
+                                <p>ตั๋วรางวัล: {winnerData.summary.totalWinningTickets}</p>
+                            </div>
+                        </div>
+
+                        {/* Winner Details */}
+                        <div className="md:col-span-2 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                            <h3 className="text-lg font-semibold text-yellow-800 mb-3 flex items-center">
+                                <Ticket className="mr-2 w-5 h-5 text-yellow-600" />
+                                รายละเอียดผู้ชนะ
+                            </h3>
+                            <div className="grid md:grid-cols-2 gap-4 text-yellow-700">
+                                <div>
+                                    <p className="font-medium">ที่อยู่ผู้ชนะ:</p>
+                                    <p className="bg-white p-2 rounded-md break-words">
+                                        {winnerData.participants[0].address}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="font-medium">ตั๋วรางวัล:</p>
+                                    <p className="bg-white p-2 rounded-md">
+                                        {winnerData.participants[0].tickets.length > 0 
+                                            ? winnerData.participants[0].tickets[0].number 
+                                            : 'ไม่มีตั๋วรางวัล'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 text-center text-gray-600 border-t border-gray-200">
+                        <p>ข้อมูลการออกรางวัลนี้เป็นเพียงการอ้างอิง กรุณาตรวจสอบข้อมูลกับแหล่งข้อมูลอย่างเป็นทางการ</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
-};
+}

@@ -5,7 +5,7 @@ import ConnectWallet from "./connectWallet";
 
 export async function getUserTickets(userAddress) {
     if (!userAddress) return [];
-    
+
     const res = await fetch(`http://localhost:5000/api/user-tickets/${userAddress}`);
     const data = await res.json();
     return data.tickets || [];
@@ -19,7 +19,7 @@ export default async function Nav() {
     console.log(session?.user.address)
     const userTicketsData = await getUserTickets(session?.user.address)
     console.log(userTicketsData)
-    
+
     return (
         <nav className="bg-gradient-to-r from-blue-800 to-blue-400 text-white shadow-lg">
             <div className="flex justify-between items-center px-4 py-2">
@@ -110,41 +110,124 @@ export default async function Nav() {
                     )}
                 </div>
             </div>
-            
+
             {/* Tickets Modal */}
+            <>
             <input type="checkbox" id="tickets-modal" className="modal-toggle" />
             <div className="modal">
-                <div className="modal-box">
-                    <h3 className="font-bold text-lg text-center">My Lottery Tickets</h3>
-                    <div className="py-4">
+                
+                <div className="modal-box max-w-3xl w-full mt-4 ">
+                    <h3 className="font-bold text-xl text-center text-blue-900 mb-4">
+                        My Lottery Tickets
+                    </h3>
+                    
+                    <div className="py-2">
                         {userTicketsData && userTicketsData.length > 0 ? (
                             <div className="space-y-4">
                                 {userTicketsData.map((roundData, index) => (
-                                    <div key={index} className="border rounded-lg p-4 bg-blue-50">
-                                        <h4 className="font-semibold text-blue-800 mb-2">Round {roundData.roundId}</h4>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {roundData.tickets.map((ticket, ticketIndex) => (
-                                                <div key={ticketIndex} className="bg-black p-3 rounded-md shadow border border-blue-200 text-center font-mono">
-                                                    {ticket}
+                                    <div 
+                                        key={index} 
+                                        className="border-2 border-blue-200 rounded-xl p-4 bg-blue-50/50 hover:bg-blue-100/50 transition-colors duration-200"
+                                    >
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="font-semibold text-lg text-blue-800">
+                                                Round {roundData.roundId}
+                                            </h4>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <h5 className="text-md font-medium text-gray-700 mb-2 flex items-center">
+                                                <svg 
+                                                    xmlns="http://www.w3.org/2000/svg" 
+                                                    className="h-5 w-5 mr-2 text-blue-600" 
+                                                    viewBox="0 0 20 20" 
+                                                    fill="currentColor"
+                                                >
+                                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
+                                                </svg>
+                                                Single Lottery (หวยเดี่ยว)
+                                            </h5>
+                                            {roundData.single && roundData.single.length > 0 ? (
+                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                                    {roundData.single.map((ticket, ticketIndex) => (
+                                                        <div 
+                                                            key={ticketIndex} 
+                                                            className="bg-gradient-to-br from-blue-900 to-blue-700 p-3 rounded-lg shadow-md text-center font-mono text-white hover:scale-105 transition-transform"
+                                                        >
+                                                            {ticket}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                <p className="text-gray-500 italic text-center">No single lottery tickets</p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <h5 className="text-md font-medium text-gray-700 mb-2 flex items-center">
+                                                <svg 
+                                                    xmlns="http://www.w3.org/2000/svg" 
+                                                    className="h-5 w-5 mr-2 text-green-600" 
+                                                    viewBox="0 0 20 20" 
+                                                    fill="currentColor"
+                                                >
+                                                    <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.758l4.564-4.02a2 2 0 00.436-2.279l-1.627-3.254a1 1 0 00-1.591-.301L10 9.5 6.177 6.389a1 1 0 00-1.59.3L2.96 9.944a2 2 0 00.435 2.28L8 16.243z" clipRule="evenodd"/>
+                                                </svg>
+                                                Pair Lottery (หวยชุด)
+                                            </h5>
+                                            {roundData.pair && roundData.pair.length > 0 ? (
+                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                                    {roundData.pair.map((ticket, ticketIndex) => (
+                                                        <div 
+                                                            key={ticketIndex} 
+                                                            className="bg-gradient-to-br from-green-900 to-green-700 p-3 rounded-lg shadow-md text-center font-mono text-white hover:scale-105 transition-transform"
+                                                        >
+                                                            {ticket}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-500 italic text-center">No pair lottery tickets</p>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-6">
-                                <p className="text-gray-500">You don't have any tickets yet.</p>
-                                <a href="/buy-tickets" className="btn btn-primary mt-4">Buy Tickets</a>
+                            <div className="text-center py-8 bg-gray-50 rounded-xl">
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    className="h-16 w-16 mx-auto mb-4 text-gray-400" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p className="text-gray-600 mb-4">You don't have any lottery tickets yet.</p>
+                                <a 
+                                    href="/buy-tickets" 
+                                    className="btn btn-primary btn-wide hover:btn-accent transition-colors"
+                                >
+                                    Buy Tickets
+                                </a>
                             </div>
                         )}
                     </div>
-                    <div className="modal-action">
-                        <label htmlFor="tickets-modal" className="btn">Close</label>
+
+                    <div className="modal-action mt-4">
+                        <label 
+                            htmlFor="tickets-modal" 
+                            className="btn btn-ghost bg-amber-200 text-black hover:bg-gray-200 transition-colors"
+                        >
+                            Close
+                        </label>
                     </div>
                 </div>
                 <label className="modal-backdrop" htmlFor="tickets-modal"></label>
             </div>
+        </>
         </nav>
     );
 }

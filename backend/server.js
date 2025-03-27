@@ -10,7 +10,7 @@ app.use(cors()); // เพื่อให้ Next.js เรียก API ได�
 app.use(express.json());
 
 const provider = new ethers.JsonRpcProvider("HTTP://192.168.1.36:8545"); // ใช้ Ganache หรือ Hardhat
-const contractAddress = "0xe7fd91Ac440aD4D7719935Be44fFB516869e7556"; // ใส่ address ที่ deploy แล้ว
+const contractAddress = "0xBeff904Bc780Fe3876e930B4b24a5804fD01dBf5"; // ใส่ address ที่ deploy แล้ว
 const lotteryABI = require("../contract/artifacts/contracts/Lottery.sol/Lottery.json").abi;
 //ใช้ private key เพื่อสร้าง wallet เอาไว้บอกเจ้าของ
 const wallet = new ethers.Wallet("0xd6c38e609f9845b8f98d9cef19e2cfabf6cb223143073102fb1d69e18d9447b2", provider); // ใช้ private key ที่คุณมี
@@ -139,16 +139,19 @@ app.get("/api/latest-round", async (req, res) => {
 app.get("/api/user-tickets/:userAddress", async (req, res) => {
     try {
       const { userAddress } = req.params;
-      console.log(userAddress)
       const userTickets = await lotteryContract.getAllUserTickets(userAddress);
-      // Convert BigInts to strings
-      console.log(userAddress)
-      console.log(userTickets)
+      
+      console.log("userTickets ที่ดึงจาก blockchain:", userTickets);
       const formattedTickets = userTickets.map((entry) => ({
         roundId: entry[0].toString(),  // Extract roundId
-        tickets: entry[1].map((ticket) => ticket.toString()),  // Extract and convert tickets
+        single: entry[1].map((ticket) => ticket.toString()),  // Extract and convert tickets
+        pair:entry[2].map((ticket) => ticket.toString()),
       }));
-      console.log("formattedTickets: ",formattedTickets)
+      console.log("useraddress:", userAddress);
+      const lastIndex = formattedTickets.length - 1;
+      console.log("formattedTickets:", formattedTickets[lastIndex]);
+      console.log("หวยเดี่ยว:", formattedTickets[lastIndex].single);
+      console.log("หวยคู่:", formattedTickets[lastIndex].pair);
   
       res.json({ userAddress, tickets: formattedTickets });
     } catch (error) {
@@ -179,29 +182,13 @@ app.post("/api/buy-tickets", async (req, res) => {
         return res.status(400).json({ error: "Invalid roundId" });
       }
   
-      // Ensure ticketNumbers is an array of integers (uint256[])
-      if (typeof ticketNumbers === 'string') {
-        // If ticketNumbers is a string, convert it to an array with a single number
-        ticketNumbers = [parseInt(ticketNumbers, 10)];
-      } else if (Array.isArray(ticketNumbers)) {
-        // If ticketNumbers is an array, parse each value to an integer
-        ticketNumbers = ticketNumbers.map(num => {
-          const parsedNum = parseInt(num, 10);
-          if (isNaN(parsedNum) || parsedNum < 0 || !Number.isInteger(parsedNum)) {
-            throw new Error(`Invalid ticket number: ${num}`);
-          }
-          return parsedNum;
-        });
-      } else {
-        return res.status(400).json({ error: "Invalid ticketNumbers format" });
-      }
   
-      console.log("ticketNumbers type after conversion:", typeof ticketNumbers);
       console.log("userAddress:", userAddress);
       console.log("roundId:", roundId);
+      console.log("ticketNumbers:", [ticketNumbers]);
   
       // Call the smart contract function
-      const tx = await lotteryContract.buyTickets(userAddress, roundId, ticketNumbers);
+      const tx = await lotteryContract.buyTickets(userAddress, roundId, [ticketNumbers]);
       await tx.wait();
   
       res.json({ message: "Tickets purchased successfully", roundId, ticketNumbers });

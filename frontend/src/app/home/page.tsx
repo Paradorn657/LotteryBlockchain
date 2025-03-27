@@ -62,7 +62,7 @@ async function sendTransaction() {
         const signer = await provider.getSigner();
 
         const tx = await signer.sendTransaction({
-            to: "0x6EbfA865b873588f3E6bF3a5ADC0843cDd6968BA",
+            to: "0xDb2B36d8803354d4070b518b6876d37E75402746",
             value: ethers.parseEther("0.5"), // Convert ETH to Wei
         });
         // setStatus("Transaction sent! Waiting for confirmation...");
@@ -81,7 +81,7 @@ async function sendTransaction() {
     }
 }
 
-export async function buyTicket(roundId: number, ticketNumber: number, buyerAddress: string,type:string) {
+export async function buyTicket(roundId: number, ticketNumber: number, buyerAddress: string) {
     console.log("buyticket")
     const result = await sendTransaction();
     if (!result?.hash) {
@@ -163,7 +163,7 @@ export default function Home() {
         }
         setBuying(true);
         try {
-            const txMessage = await buyTicket(roundId, ticketNumber, buyerAddress,type);
+            const txMessage = await buyTicket(roundId, ticketNumber, buyerAddress);
             console.log(txMessage);
             setNotification({
                 show: true,
@@ -352,7 +352,7 @@ export default function Home() {
 
                                             <button
                                                 className="bg-green-600 text-white py-2 px-6 rounded-lg shadow hover:bg-green-700 transition mt-2 w-full flex items-center justify-center"
-                                                onClick={() => handleBuyTicket(ticket,'single')}
+                                                onClick={() => handleBuyTicket(Number(ticket),'single')}
                                                 disabled={buying}
                                             >
                                                 {buying ? (
@@ -397,7 +397,7 @@ export default function Home() {
 
                                             <button
                                                 className="bg-green-600 text-white py-2 px-6 rounded-lg shadow hover:bg-green-700 transition mt-2 w-full flex items-center justify-center"
-                                                onClick={() => handleBuyTicket(ticket,'pair')}
+                                                onClick={() => handleBuyTicket(Number(ticket),'pair')}
                                                 disabled={buying}
                                             >
                                                 {buying ? (

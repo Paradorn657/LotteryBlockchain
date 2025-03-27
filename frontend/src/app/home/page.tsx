@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Ticket, CircleDollarSign, Loader2, Trophy, Calendar, AlertCircle } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { ethers } from "ethers";
+import { convertTHBtoETH } from "@/features/convertCurrency";
 
 export async function getTickets(roundId: any) {
     const res = await fetch(`http://localhost:5000/api/tickets/${roundId}`);
@@ -41,7 +42,7 @@ export async function getwinningNumberById(roundId: number) {
     return data;
 }
 
-export async function getUserTickets(userAddress) {
+export async function getUserTickets(userAddress: string) {
     if (!userAddress) return [];
     
     const res = await fetch(`http://localhost:5000/api/user-tickets/${userAddress}`);
@@ -51,19 +52,27 @@ export async function getUserTickets(userAddress) {
 
 async function sendTransaction() {
     console.log("ส่ง")
-    if (!window.ethereum) {
+    if (!(window as any).ethereum) {
         alert("Please install MetaMask!");
         return;
     }
 
     try {
         console.log("wow")
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
         const signer = await provider.getSigner();
 
+        const value = await convertTHBtoETH(80);
+        if (!value) {
+            return {
+                status: "failed"
+            }
+        }
+        const amountInWei = ethers.parseEther(value.toFixed(18));
+
         const tx = await signer.sendTransaction({
-            to: "0x6EbfA865b873588f3E6bF3a5ADC0843cDd6968BA",
-            value: ethers.parseEther("0.5"), // Convert ETH to Wei
+            to: process.env.NEXT_PUBLIC_GM_ADDRESS,
+            value: amountInWei, // Convert ETH to Wei
         });
         // setStatus("Transaction sent! Waiting for confirmation...");
         await tx.wait(); // Wait for transaction confirmation
@@ -77,7 +86,6 @@ async function sendTransaction() {
         return {
             status: "failed"
         }
-        // setStatus("Transaction failed!");
     }
 }
 

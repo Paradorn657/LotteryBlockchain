@@ -10,10 +10,10 @@ app.use(cors()); // เพื่อให้ Next.js เรียก API ได�
 app.use(express.json());
 
 const provider = new ethers.JsonRpcProvider("HTTP://127.0.0.1:7545"); // ใช้ Ganache หรือ Hardhat
-const contractAddress = "0xc7041f24168E3Cdc974A71176EE41Fe01915d1Bc"; // ใส่ address ที่ deploy แล้ว
+const contractAddress = "0xC5158FA95dc39Bf4b8701b6A93d113c4046Fb500"; // ใส่ address ที่ deploy แล้ว
 const lotteryABI = require("../contract/artifacts/contracts/Lottery.sol/Lottery.json").abi;
 //ใช้ private key เพื่อสร้าง wallet เอาไว้บอกเจ้าของ
-const wallet = new ethers.Wallet("0x49560f1ba08b56e5bf42517e604884c76847b847d4e72bf5f55f6fce2b225b3a", provider); // ใช้ private key ที่คุณมี
+const wallet = new ethers.Wallet("0xa85f0fce6f94f24eb1121f305a266ba1cfc4b7698bc06fbdcecdb7d87f91db55", provider); // ใช้ private key ที่คุณมี
 const lotteryContract = new ethers.Contract(contractAddress, lotteryABI, wallet);
 async function autoGenerateLottery() {
     try {
@@ -44,7 +44,7 @@ async function autoGenerateLottery() {
       round = await lotteryContract.getLatestRoundId(); // อัปเดตรอบใหม่หลังจากสร้าง
     }
   
-    cron.schedule("*/5 * * * *", async () => {
+    cron.schedule("*/1 * * * *", async () => {
       try {
         round = await lotteryContract.getLatestRoundId(); // ดึงรอบล่าสุดก่อนออกรางวัล
         console.log("กำลังออกรางวัล... งวดที่", round.toString());
@@ -155,6 +155,22 @@ app.get("/api/user-tickets/:userAddress", async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   });
+
+app.get("/api/get-winner", async (req, res) => {
+  try {
+    let { roundId } = req.query; // Get roundId from query parameter
+    
+    // Call the view function, which doesn't require a transaction
+    const roundResults = await lotteryContract.printRoundResults(roundId);
+    
+    res.json({ 
+      message: "Round results retrieved successfully", 
+      results: roundResults 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.post("/api/buy-tickets", async (req, res) => {
     try {

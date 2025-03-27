@@ -89,33 +89,25 @@ export default async function Nav() {
             <div className="flex justify-between items-center px-4 py-2">
                 <div className="flex items-center space-x-4">
                     {/* Brand/logo */}
-                    <a href="/home" className="text-xl font-black tracking-wider px-3 py-2 rounded-md hover:bg-blue-800/20 transition-colors">
-                        หวยครัว
+                    <a href="/" className="text-xl font-black tracking-wider px-3 py-2 rounded-md hover:bg-blue-800/20 transition-colors">
+                        LOTTORUAY
                     </a>
                     {/* Links on the left side next to "DOLLARS" */}
                     <ul className="hidden lg:flex items-center space-x-2">
-                        <li>
-                            <a href="/bot" className="flex items-center px-3 py-2 rounded-md font-semibold hover:bg-blue-400/20 transition-colors">
+                        {/* <li>
+                            <a href="/checklottery" className="flex items-center px-3 py-2 rounded-md font-semibold hover:bg-blue-400/20 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
-                                Bot
+                                reward history
                             </a>
-                        </li>
+                        </li> */}
                         <li>
-                            <a href="/accounts" className="flex items-center px-3 py-2 rounded-md font-semibold hover:bg-red-600/20 transition-colors">
+                            <a href="/checklottery" className="flex items-center px-3 py-2 rounded-md font-semibold hover:bg-blue-400/20 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
                                 </svg>
-                                Accounts
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/payment" className="flex items-center px-3 py-2 rounded-md font-semibold hover:bg-red-600/20 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                </svg>
-                                Payment
+                                reward history
                             </a>
                         </li>
                     </ul>
@@ -177,155 +169,151 @@ export default async function Nav() {
 
             {/* Tickets Modal */}
             <>
-    <input type="checkbox" id="tickets-modal" className="modal-toggle" />
-    <div className="modal">
-        <div className="modal-box max-w-4xl w-full mt-4 bg-white">
-            <h3 className="font-bold text-2xl text-center text-blue-900 mb-6">
-                My Lottery Tickets
-            </h3>
+                <input type="checkbox" id="tickets-modal" className="modal-toggle" />
+                <div className="modal">
+                    <div className="modal-box max-w-4xl w-full mt-4 bg-white">
+                        <h3 className="font-bold text-2xl text-center text-blue-900 mb-6">
+                            My Lottery Tickets
+                        </h3>
 
-            <div className="py-2">
-                {userTicketsWithResults && userTicketsWithResults.length > 0 ? (
-                    <div className="space-y-6">
-                        {userTicketsWithResults.map((roundData, index) => (
-                            <div
-                                key={index}
-                                className="border border-blue-100 rounded-xl p-6 bg-white shadow-sm"
+                        <div className="py-2">
+                            {userTicketsWithResults && userTicketsWithResults.length > 0 ? (
+                                <div className="space-y-6">
+                                    {userTicketsWithResults.map((roundData, index) => (
+                                        <div
+                                            key={index}
+                                            className="border border-blue-100 rounded-xl p-6 bg-white shadow-sm"
+                                        >
+                                            <div className="flex justify-between items-center mb-4">
+                                                <h4 className="font-semibold text-xl text-blue-900">
+                                                    Round {roundData.roundId}
+                                                </h4>
+                                            </div>
+
+                                            <div className="mb-6">
+                                                <h5 className="text-md font-medium text-gray-600 mb-4">
+                                                    Single Lottery (หวยเดี่ยว)
+                                                </h5>
+                                                {roundData.single && roundData.single.length > 0 ? (
+                                                    <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                                                        {roundData.single.map((ticket, ticketIndex) => (
+                                                            <div
+                                                                key={ticketIndex}
+                                                                className={`relative rounded-lg p-3 text-center transition-all duration-300 ${ticket.isWinner
+                                                                    ? (
+                                                                        ticket.prizeRank === '0'
+                                                                            ? 'bg-yellow-50 border-2 border-yellow-200 text-yellow-800'
+                                                                            : ticket.prizeRank === '1'
+                                                                                ? 'bg-gray-50 border-2 border-gray-200 text-gray-800'
+                                                                                : ticket.prizeRank === '2'
+                                                                                    ? 'bg-orange-50 border-2 border-orange-200 text-orange-800'
+                                                                                    : 'bg-blue-50 border border-blue-100 text-blue-800'
+                                                                    )
+                                                                    : 'bg-blue-100 border border-blue-200 text-blue-900'
+                                                                    }`}
+                                                            >
+                                                                {ticket.isWinner && (
+                                                                    <div className={`absolute top-1 right-1 rounded-full px-2  text-xs font-semibold ${ticket.prizeRank === '0'
+                                                                        ? 'bg-yellow-100 text-yellow-800'
+                                                                        : ticket.prizeRank === '1'
+                                                                            ? 'bg-gray-100 text-gray-800'
+                                                                            : ticket.prizeRank === '2'
+                                                                                ? 'bg-orange-100 text-orange-800'
+                                                                                : 'bg-blue-100 text-blue-800'
+                                                                        }`}>
+                                                                        ถูกรางวัล!
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-lg font-bold">
+                                                                    {ticket.number}
+                                                                </div>
+                                                                {ticket.isWinner && (
+                                                                    <div className="text-xs font-medium mt-1">
+                                                                        รางวัลที่ {Number(ticket.prizeRank) + 1}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-500 italic text-center text-sm">No single lottery tickets</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <h5 className="text-md font-medium text-gray-600 mb-4">
+                                                    Pair Lottery (หวยชุด)
+                                                </h5>
+                                                {roundData.pair && roundData.pair.length > 0 ? (
+                                                    <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                                                        {roundData.pair.map((ticket, ticketIndex) => (
+                                                            <div
+                                                                key={ticketIndex}
+                                                                className={`relative rounded-lg p-3 text-center transition-all duration-300 ${ticket.isWinner
+                                                                    ? (
+                                                                        ticket.prizeRank === '0'
+                                                                            ? 'bg-yellow-50 border-2 border-yellow-200 text-yellow-800'
+                                                                            : ticket.prizeRank === '1'
+                                                                                ? 'bg-gray-50 border-2 border-gray-200 text-gray-800'
+                                                                                : ticket.prizeRank === '2'
+                                                                                    ? 'bg-orange-50 border-2 border-orange-200 text-orange-800'
+                                                                                    : 'bg-green-50 border border-green-100 text-green-800'
+                                                                    )
+                                                                    : 'bg-green-100 border border-green-200 text-green-900'
+                                                                    }`}
+                                                            >
+                                                                {ticket.isWinner && (
+                                                                    <div className={`absolute top-1 right-1 rounded-full px-2  text-xs font-semibold ${ticket.prizeRank === '0'
+                                                                        ? 'bg-yellow-100 text-yellow-800'
+                                                                        : ticket.prizeRank === '1'
+                                                                            ? 'bg-gray-100 text-gray-800'
+                                                                            : ticket.prizeRank === '2'
+                                                                                ? 'bg-orange-100 text-orange-800'
+                                                                                : 'bg-green-100 text-green-800'
+                                                                        }`}>
+                                                                        ถูกรางวัล!
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-lg font-bold">
+                                                                    {ticket.number}
+                                                                </div>
+                                                                {ticket.isWinner && (
+                                                                    <div className="text-xs font-medium mt-1">
+                                                                        รางวัลที่ {Number(ticket.prizeRank) + 1}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-500 italic text-center text-sm">No pair lottery tickets</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 bg-gray-50 rounded-xl">
+                                    <p className="text-gray-600 mb-6 text-xl">You don't have any lottery tickets yet.</p>
+                                    <a href="/" className="btn btn-primary btn-wide">
+                                        Buy Tickets
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="modal-action mt-6">
+                            <label
+                                htmlFor="tickets-modal"
+                                className="btn btn-ghost bg-gray-200 text-black"
                             >
-                                <div className="flex justify-between items-center mb-4">
-                                    <h4 className="font-semibold text-xl text-blue-900">
-                                        Round {roundData.roundId}
-                                    </h4>
-                                </div>
-
-                                <div className="mb-6">
-                                    <h5 className="text-md font-medium text-gray-600 mb-4">
-                                        Single Lottery (หวยเดี่ยว)
-                                    </h5>
-                                    {roundData.single && roundData.single.length > 0 ? (
-                                        <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                                            {roundData.single.map((ticket, ticketIndex) => (
-                                                <div
-                                                    key={ticketIndex}
-                                                    className={`relative rounded-lg p-3 text-center transition-all duration-300 ${
-                                                        ticket.isWinner 
-                                                            ? (
-                                                                ticket.prizeRank === '0'
-                                                                    ? 'bg-yellow-50 border-2 border-yellow-200 text-yellow-800'
-                                                                    : ticket.prizeRank === '1' 
-                                                                        ? 'bg-gray-50 border-2 border-gray-200 text-gray-800'
-                                                                        : ticket.prizeRank === '2' 
-                                                                            ? 'bg-orange-50 border-2 border-orange-200 text-orange-800'
-                                                                            : 'bg-blue-50 border border-blue-100 text-blue-800'
-                                                              )
-                                                            : 'bg-blue-100 border border-blue-200 text-blue-900'
-                                                    }`}
-                                                >
-                                                    {ticket.isWinner && (
-                                                        <div className={`absolute top-1 right-1 rounded-full px-2  text-xs font-semibold ${
-                                                            ticket.prizeRank === '0' 
-                                                                ? 'bg-yellow-100 text-yellow-800' 
-                                                                : ticket.prizeRank === '1' 
-                                                                    ? 'bg-gray-100 text-gray-800' 
-                                                                    : ticket.prizeRank === '2' 
-                                                                        ? 'bg-orange-100 text-orange-800' 
-                                                                        : 'bg-blue-100 text-blue-800'
-                                                        }`}>
-                                                            ถูกรางวัล!
-                                                        </div>
-                                                    )}
-                                                    <div className="text-lg font-bold">
-                                                        {ticket.number}
-                                                    </div>
-                                                    {ticket.isWinner && (
-                                                        <div className="text-xs font-medium mt-1">
-                                                            รางวัลที่ {Number(ticket.prizeRank) + 1}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-gray-500 italic text-center text-sm">No single lottery tickets</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <h5 className="text-md font-medium text-gray-600 mb-4">
-                                        Pair Lottery (หวยชุด)
-                                    </h5>
-                                    {roundData.pair && roundData.pair.length > 0 ? (
-                                        <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                                            {roundData.pair.map((ticket, ticketIndex) => (
-                                                <div
-                                                    key={ticketIndex}
-                                                    className={`relative rounded-lg p-3 text-center transition-all duration-300 ${
-                                                        ticket.isWinner 
-                                                            ? (
-                                                                ticket.prizeRank === '0' 
-                                                                    ? 'bg-yellow-50 border-2 border-yellow-200 text-yellow-800'
-                                                                    : ticket.prizeRank === '1' 
-                                                                        ? 'bg-gray-50 border-2 border-gray-200 text-gray-800'
-                                                                        : ticket.prizeRank === '2' 
-                                                                            ? 'bg-orange-50 border-2 border-orange-200 text-orange-800'
-                                                                            : 'bg-green-50 border border-green-100 text-green-800'
-                                                              )
-                                                            : 'bg-green-100 border border-green-200 text-green-900'
-                                                    }`}
-                                                >
-                                                    {ticket.isWinner && (
-                                                        <div className={`absolute top-1 right-1 rounded-full px-2  text-xs font-semibold ${
-                                                            ticket.prizeRank === '0' 
-                                                                ? 'bg-yellow-100 text-yellow-800' 
-                                                                : ticket.prizeRank === '1' 
-                                                                    ? 'bg-gray-100 text-gray-800' 
-                                                                    : ticket.prizeRank === '2' 
-                                                                        ? 'bg-orange-100 text-orange-800' 
-                                                                        : 'bg-green-100 text-green-800'
-                                                        }`}>
-                                                            ถูกรางวัล!
-                                                        </div>
-                                                    )}
-                                                    <div className="text-lg font-bold">
-                                                        {ticket.number}
-                                                    </div>
-                                                    {ticket.isWinner && (
-                                                        <div className="text-xs font-medium mt-1">
-                                                            รางวัลที่ {Number(ticket.prizeRank) + 1}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-gray-500 italic text-center text-sm">No pair lottery tickets</p>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+                                Close
+                            </label>
+                        </div>
                     </div>
-                ) : (
-                    <div className="text-center py-12 bg-gray-50 rounded-xl">
-                        <p className="text-gray-600 mb-6 text-xl">You don't have any lottery tickets yet.</p>
-                        <a href="/buy-tickets" className="btn btn-primary btn-wide">
-                            Buy Tickets
-                        </a>
-                    </div>
-                )}
-            </div>
-
-            <div className="modal-action mt-6">
-                <label 
-                    htmlFor="tickets-modal" 
-                    className="btn btn-ghost bg-gray-200 text-black"
-                >
-                    Close
-                </label>
-            </div>
-        </div>
-        <label className="modal-backdrop" htmlFor="tickets-modal"></label>
-    </div>
-</>
+                    <label className="modal-backdrop" htmlFor="tickets-modal"></label>
+                </div>
+            </>
 
         </nav>
     );

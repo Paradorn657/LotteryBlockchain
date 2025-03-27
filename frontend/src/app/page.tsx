@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react";
 import { Ticket, CircleDollarSign, Loader2, Trophy, Calendar, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ethers } from "ethers";
 import { convertTHBtoETH } from "@/features/convertCurrency";
@@ -113,6 +114,7 @@ export async function buyTicket(roundId: number, ticketNumber: number, buyerAddr
 }
 
 export default function Home() {
+  const router = useRouter();
   const [tickets, setTickets] = useState<{ singleTickets: string[], pairTickets: string[], createdDate?: string }>({ singleTickets: [], pairTickets: [] });
   const [roundId, setRoundId] = useState(null);
   const [winningNumber, setWiningNumber] = useState<{ createdDate: string; roundId: number; winningNumbers: string[] } | null>(null);
@@ -188,6 +190,7 @@ export default function Home() {
       // Refresh available tickets after successful purchase
       const ticketData = await getTickets(roundId);
       setTickets(ticketData);
+      
     } catch (error: any) {
       console.log(`Error purchasing ticket: ${error}`);
       setNotification({
@@ -195,9 +198,11 @@ export default function Home() {
         message: "เกิดข้อผิดพลาดในการซื้อสลาก กรุณาลองใหม่อีกครั้ง",
         type: "error"
       });
+      // router.refresh();
     } finally {
       setBuying(false);
     }
+    router.refresh();
   };
 
   return (

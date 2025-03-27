@@ -73,13 +73,13 @@ async function sendTransaction() {
     }
 }
 
-export async function buyTicket(roundId: number, ticketNumber: number, buyerAddress: string) {
+export async function buyTicket(roundId: number, ticketNumber: number, buyerAddress: string,type:string) {
     console.log("buyticket")
     const result = await sendTransaction();
     if (!result?.hash) {
         return
     }
-    
+
     const res = await fetch("http://localhost:5000/api/buy-tickets", {
         method: "POST",
         headers: {
@@ -136,7 +136,7 @@ export default function Home() {
         fetchData();
     }, []);
 
-    const handleBuyTicket = async (ticketNumber) => {
+    const handleBuyTicket = async (ticketNumber:number,type:string) => {
         console.log(buyerAddress)
         if (buyerAddress == "") {
             setNotification({
@@ -148,11 +148,11 @@ export default function Home() {
         }
         setBuying(true);
         try {
-            const txMessage = await buyTicket(roundId, ticketNumber, buyerAddress);
+            const txMessage = await buyTicket(roundId, ticketNumber, buyerAddress,type);
             console.log(txMessage);
             setNotification({
                 show: true,
-                message: "ซื้อสลากเรียบร้อยแล้ว!",
+                message: `ซื้อ${type=='single'?"เดี่ยว":"ชุด 2 ใบ"} เลข ${ticketNumber} เรียบร้อยแล้ว!`,
                 type: "success"
             });
             // Refresh ticket list after successful purchase
@@ -200,7 +200,7 @@ export default function Home() {
                 </div>
 
                 Winning Numbers Section
-                {winningNumber && (
+                {winningNumber && winningNumber.winningNumbers ? (
                     <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-yellow-400">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
@@ -260,7 +260,12 @@ export default function Home() {
                             </div>
                         </div>
                     </div>
+                ) : (
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-gray-300 text-center">
+                        <p className="text-xl font-semibold text-gray-600">กำลังรอออกรางวัล...</p>
+                    </div>
                 )}
+
 
                 {/* Round info card */}
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-blue-500">
@@ -328,7 +333,7 @@ export default function Home() {
 
                                             <button
                                                 className="bg-green-600 text-white py-2 px-6 rounded-lg shadow hover:bg-green-700 transition mt-2 w-full flex items-center justify-center"
-                                                onClick={() => handleBuyTicket(ticket)}
+                                                onClick={() => handleBuyTicket(ticket,'single')}
                                                 disabled={buying}
                                             >
                                                 {buying ? (
@@ -373,7 +378,7 @@ export default function Home() {
 
                                             <button
                                                 className="bg-green-600 text-white py-2 px-6 rounded-lg shadow hover:bg-green-700 transition mt-2 w-full flex items-center justify-center"
-                                                onClick={() => handleBuyTicket(ticket)}
+                                                onClick={() => handleBuyTicket(ticket,'pair')}
                                                 disabled={buying}
                                             >
                                                 {buying ? (

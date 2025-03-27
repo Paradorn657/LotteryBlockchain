@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Ticket, CircleDollarSign, Loader2, Trophy, Calendar, AlertCircle } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { ethers } from "ethers";
+import { convertTHBtoETH } from "@/features/convertCurrency";
 
 export async function getTickets(roundId: any) {
     const res = await fetch(`http://localhost:5000/api/tickets/${roundId}`);
@@ -41,7 +42,7 @@ export async function getwinningNumberById(roundId: number) {
     return data;
 }
 
-export async function getUserTickets(userAddress) {
+export async function getUserTickets(userAddress: string) {
     if (!userAddress) return [];
     
     const res = await fetch(`http://localhost:5000/api/user-tickets/${userAddress}`);
@@ -51,19 +52,27 @@ export async function getUserTickets(userAddress) {
 
 async function sendTransaction() {
     console.log("ส่ง")
-    if (!window.ethereum) {
+    if (!(window as any).ethereum) {
         alert("Please install MetaMask!");
         return;
     }
 
     try {
         console.log("wow")
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
         const signer = await provider.getSigner();
 
+        const value = await convertTHBtoETH(80);
+        if (!value) {
+            return {
+                status: "failed"
+            }
+        }
+        const amountInWei = ethers.parseEther(value.toFixed(18));
+
         const tx = await signer.sendTransaction({
-            to: "0x6EbfA865b873588f3E6bF3a5ADC0843cDd6968BA",
-            value: ethers.parseEther("0.5"), // Convert ETH to Wei
+            to: process.env.NEXT_PUBLIC_GM_ADDRESS,
+            value: amountInWei, // Convert ETH to Wei
         });
         // setStatus("Transaction sent! Waiting for confirmation...");
         await tx.wait(); // Wait for transaction confirmation
@@ -77,7 +86,6 @@ async function sendTransaction() {
         return {
             status: "failed"
         }
-        // setStatus("Transaction failed!");
     }
 }
 
@@ -87,7 +95,7 @@ export async function buyTicket(roundId: number, ticketNumber: number, buyerAddr
     if (!result?.hash) {
         return
     }
-    
+
     const res = await fetch("http://localhost:5000/api/buy-tickets", {
         method: "POST",
         headers: {
@@ -151,7 +159,7 @@ export default function Home() {
         fetchData();
     }, [session?.user?.address]);
 
-    const handleBuyTicket = async (ticketNumber) => {
+    const handleBuyTicket = async (ticketNumber:number,type:string) => {
         console.log(buyerAddress)
         if (buyerAddress == "") {
             setNotification({
@@ -167,7 +175,7 @@ export default function Home() {
             console.log(txMessage);
             setNotification({
                 show: true,
-                message: "ซื้อสลากเรียบร้อยแล้ว!",
+                message: `ซื้อ${type=='single'?"เดี่ยว":"ชุด 2 ใบ"} เลข ${ticketNumber} เรียบร้อยแล้ว!`,
                 type: "success"
             });
             
@@ -219,7 +227,7 @@ export default function Home() {
                 </div>
 
                 Winning Numbers Section
-                {winningNumber && (
+                {winningNumber && winningNumber.winningNumbers ? (
                     <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-yellow-400">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
@@ -279,52 +287,12 @@ export default function Home() {
                             </div>
                         </div>
                     </div>
-                )}
-
-                {/* User Tickets section */}
-                {session?.user && userTickets.length > 0 && (
-                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-purple-500">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                            <Ticket className="w-5 h-5 text-purple-500 mr-2" />
-                            สลากที่คุณซื้อไว้
-                        </h2>
-                        
-                        {userTickets.map((roundTickets, index) => (
-                            <div key={`round-${index}`} className="mb-6">
-                                <h3 className="text-lg font-medium text-gray-700 mb-4 border-l-4 border-purple-500 pl-3">
-                                    งวดที่ {roundTickets.roundId}
-                                </h3>
-                                
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                    {roundTickets.tickets.map((ticket, ticketIndex) => (
-                                        <div
-                                            key={`user-ticket-${ticketIndex}`}
-                                            className="bg-gradient-to-b from-white to-purple-50 border border-purple-200 rounded-xl p-4 text-center"
-                                        >
-                                            <div className="flex justify-between mb-2 text-xs text-gray-500">
-                                                <span>สำนักงานสลากฯ</span>
-                                                <span>80 บาท</span>
-                                            </div>
-                                            
-                                            <div className="bg-white p-3 rounded-lg shadow-inner mb-3">
-                                                <p className="text-3xl font-bold text-purple-700 tracking-wider">
-                                                    {ticket}
-                                                </p>
-                                            </div>
-                                            
-                                            {/* Check if ticket is a winner */}
-                                            {winningNumber && winningNumber.winningNumbers.includes(ticket) && (
-                                                <div className="bg-yellow-100 text-yellow-800 py-1 px-3 rounded-full text-sm font-medium mt-2">
-                                                    ถูกรางวัล!
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                ) : (
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-gray-300 text-center">
+                        <p className="text-xl font-semibold text-gray-600">กำลังรอออกรางวัล...</p>
                     </div>
                 )}
+
 
                 {/* Round info card */}
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-blue-500">
@@ -392,7 +360,7 @@ export default function Home() {
 
                                             <button
                                                 className="bg-green-600 text-white py-2 px-6 rounded-lg shadow hover:bg-green-700 transition mt-2 w-full flex items-center justify-center"
-                                                onClick={() => handleBuyTicket(ticket)}
+                                                onClick={() => handleBuyTicket(Number(ticket),'single')}
                                                 disabled={buying}
                                             >
                                                 {buying ? (
@@ -437,7 +405,7 @@ export default function Home() {
 
                                             <button
                                                 className="bg-green-600 text-white py-2 px-6 rounded-lg shadow hover:bg-green-700 transition mt-2 w-full flex items-center justify-center"
-                                                onClick={() => handleBuyTicket(ticket)}
+                                                onClick={() => handleBuyTicket(Number(ticket),'pair')}
                                                 disabled={buying}
                                             >
                                                 {buying ? (

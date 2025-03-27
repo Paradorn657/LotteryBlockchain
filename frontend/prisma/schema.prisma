@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://postgres:12345@localhost:5432/Blockchain?schema=public"
 }
 
 model user {

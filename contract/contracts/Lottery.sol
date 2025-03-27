@@ -13,7 +13,8 @@ contract Lottery {
     
     struct UserTickets {
         uint256 roundId;
-        uint256[] ticketNumbers;
+        uint256[] singleTickets;
+        uint256[] pairTickets;
     }
     struct UserWinning {
         uint256 roundId;
@@ -160,23 +161,81 @@ contract Lottery {
     function getAllUserTickets(address _user) external view returns (UserTickets[] memory) {
         uint256 totalRounds = roundId;
         uint256 validRounds = 0;
+
+        // นับจำนวนรอบที่ user มีหวย
         for (uint256 i = 1; i <= totalRounds; i++) {
             if (userTickets[_user][i].length > 0) {
                 validRounds++;
             }
         }
-        
+
+        // เตรียมโครงสร้างคืนค่า
         UserTickets[] memory userTicketsArray = new UserTickets[](validRounds);
         uint256 index = 0;
+
         for (uint256 i = 1; i <= totalRounds; i++) {
             uint256[] memory ticketsInRound = userTickets[_user][i];
             if (ticketsInRound.length > 0) {
-                userTicketsArray[index] = UserTickets(i, ticketsInRound);
+                uint256[] memory singleTickets;
+                uint256[] memory pairTickets;
+                uint256 singleCount = 0;
+                uint256 pairCount = 0;
+
+                // ตรวจสอบแต่ละเลขว่าเป็นหวยเดี่ยวหรือหวยชุด
+                for (uint256 j = 0; j < ticketsInRound.length; j++) {
+                    uint256 ticketNumber = ticketsInRound[j];
+
+                    bool isPair = false;
+                    for (uint256 k = 0; k < rounds[i].pairTickets.length; k++) {
+                        if (rounds[i].pairTickets[k] == ticketNumber) {
+                            isPair = true;
+                            break;
+                        }
+                    }
+
+                    if (isPair) {
+                        pairCount++;
+                    } else {
+                        singleCount++;
+                    }
+                }
+
+                // จัดสรร array ตามจำนวนที่นับได้
+                singleTickets = new uint256[](singleCount);
+                pairTickets = new uint256[](pairCount);
+
+                uint256 singleIndex = 0;
+                uint256 pairIndex = 0;
+
+                for (uint256 j = 0; j < ticketsInRound.length; j++) {
+                    uint256 ticketNumber = ticketsInRound[j];
+
+                    bool isPair = false;
+                    for (uint256 k = 0; k < rounds[i].pairTickets.length; k++) {
+                        if (rounds[i].pairTickets[k] == ticketNumber) {
+                            isPair = true;
+                            break;
+                        }
+                    }
+
+                    if (isPair) {
+                        pairTickets[pairIndex] = ticketNumber;
+                        pairIndex++;
+                    } else {
+                        singleTickets[singleIndex] = ticketNumber;
+                        singleIndex++;
+                    }
+                }
+
+                // ใส่ข้อมูลลงใน struct ที่ return ออกไป
+                userTicketsArray[index] = UserTickets(i, singleTickets, pairTickets);
                 index++;
             }
         }
+
         return userTicketsArray;
     }
+
 
     function _getCombinedEntries(uint256 _roundId) internal view returns (uint256[] memory) {
         uint256 total = rounds[_roundId].singleTickets.length + rounds[_roundId].pairTickets.length;

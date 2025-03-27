@@ -26,16 +26,72 @@ export async function getwinningNumberById(roundId) {
     }
 }
 
-export async function getwinner(roundId) {
+function parseLotteryResults(resultsString) {
     try {
-        const res = await fetch(`http://localhost:5000/api/get-winner?roundId=${roundId}`);
-        if (!res.ok) throw new Error(`API request failed with status ${res.status}`);
-        const data = await res.json();
-        return data;
+        const roundMatch = resultsString.match(/Lottery Round (\d+) Results:/);
+        const winningNumbersMatch = resultsString.match(/Winning Numbers: ([\d,\s]+)/);
+        const userAddressMatch = resultsString.match(/User (0x[a-fA-F0-9]+):/);
+        const participantsMatch = resultsString.match(/Total Participating Users: (\d+)/);
+        const ticketsMatch = resultsString.match(/Total Tickets Sold: (\d+)/);
+        const winningTicketsMatch = resultsString.match(/Total Winning Tickets: (\d+)/);
+
+        if (!roundMatch || !winningNumbersMatch) return null;
+
+        const participants = [];
+        const userSection = resultsString.split(/User 0x[a-fA-F0-9]+:/)[1];
+        
+        const userTickets = [];
+        const ticketMatches = userSection.match(/Ticket \d+ \(.*?\) - .*?\n/g) || [];
+        
+        ticketMatches.forEach(ticketLine => {
+            const ticketNumberMatch = ticketLine.match(/Ticket (\d+)/);
+            const ticketTypeMatch = ticketLine.match(/\((.*?)\)/);
+            const prizeMatch = ticketLine.match(/- (.*?)$/);
+            
+            if (ticketNumberMatch && ticketTypeMatch && prizeMatch) {
+                userTickets.push({
+                    number: parseInt(ticketNumberMatch[1], 10),
+                    type: ticketTypeMatch[1],
+                    prize: prizeMatch[1]
+                });
+            }
+        });
+
+        return {
+            roundNumber: parseInt(roundMatch[1], 10),
+            winningNumbers: winningNumbersMatch[1].split(',').map(n => parseInt(n.trim(), 10)),
+            participants: [{
+                address: userAddressMatch ? userAddressMatch[1] : null,
+                tickets: userTickets,
+                totalTickets: userTickets.length,
+                winningTickets: userTickets.filter(ticket => ticket.prize !== 'No Prize').length
+            }],
+            summary: {
+                totalParticipatingUsers: participantsMatch ? parseInt(participantsMatch[1], 10) : 0,
+                totalTicketsSold: ticketsMatch ? parseInt(ticketsMatch[1], 10) : 0,
+                totalWinningTickets: winningTicketsMatch ? parseInt(winningTicketsMatch[1], 10) : 0
+            }
+        };
     } catch (error) {
-        console.error("Error fetching winner:", error);
-        throw error;
+        console.error("Error parsing lottery results:", error);
+        return null;
     }
+}
+
+
+function extractWinners(resultsString: string) {
+    const parsedResults = parseLotteryResults(resultsString);
+    
+    if (!parsedResults) return "No winners in this round.";
+
+    const winners = parsedResults.participants
+        .filter(participant => participant.winningTickets > 0)
+        .map(participant => ({
+            address: participant.address,
+            winningTickets: participant.winningTickets
+        }));
+
+    return winners.length > 0 ? winners : "No winners in this round.";
 }
 
 export default function LotteryHistoryPage() {
@@ -71,7 +127,7 @@ export default function LotteryHistoryPage() {
                 try {
                     const [winningNumberResult, winnerResult] = await Promise.all([
                         getwinningNumberById(selectedRound),
-                        getwinner(selectedRound)
+
                     ]);
                     setWinningNumber(winningNumberResult);
                     setWinnerData(winnerResult);
@@ -96,20 +152,6 @@ export default function LotteryHistoryPage() {
     const roundOptions = latestRound > 1
         ? Array.from({ length: latestRound - 1 }, (_, i) => latestRound - 1 - i)
         : [];
-
-    // Helper function to parse winner data
-    const parseWinnerData = (data) => {
-        if (!data) return null;
-        return {
-            roundNumber: data.match(/Round (\d+)/)[1],
-            winningNumbers: data.match(/Winning Numbers: ([\d,\s]+)/)[1].split(',').map(n => n.trim()),
-            participatingUsers: data.match(/Total Participating Users: (\d+)/)[1],
-            totalTickets: data.match(/Total Tickets Sold: (\d+)/)[1],
-            winningTickets: data.match(/Total Winning Tickets: (\d+)/)[1],
-            winnerAddress: data.match(/User (0x[a-fA-F0-9]+)/)[1],
-            winningTicket: data.match(/Ticket (\d+) \(Single Ticket\) - THIRD PRIZE/)[1]
-        };
-    };
 
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-6  mt-6">
@@ -300,7 +342,7 @@ export default function LotteryHistoryPage() {
                                 <h2 className="text-xl md:text-2xl font-bold">ผลผู้ชนะรางวัล</h2>
                             </div>
                             <div className="bg-white text-green-800 py-1 px-4 rounded-full text-sm font-bold">
-                                งวดที่ {parseWinnerData(winnerData).roundNumber}
+                                งวดที่ {winnerData.roundNumber}
                             </div>
                         </div>
                     </div>
@@ -313,7 +355,7 @@ export default function LotteryHistoryPage() {
                                 หมายเลขรางวัล
                             </h3>
                             <div className="flex justify-center space-x-4">
-                                {parseWinnerData(winnerData).winningNumbers.map((number, index) => (
+                                {winnerData.winningNumbers.map((number, index) => (
                                     <div 
                                         key={index} 
                                         className="bg-white p-3 rounded-lg shadow-md border border-green-300 text-xl font-bold text-green-700"
@@ -331,9 +373,9 @@ export default function LotteryHistoryPage() {
                                 รายละเอียดผู้เข้าร่วม
                             </h3>
                             <div className="space-y-2 text-blue-700">
-                                <p>จำนวนผู้เข้าร่วม: {parseWinnerData(winnerData).participatingUsers}</p>
-                                <p>จำนวนตั๋วทั้งหมด: {parseWinnerData(winnerData).totalTickets}</p>
-                                <p>ตั๋วรางวัล: {parseWinnerData(winnerData).winningTickets}</p>
+                                <p>จำนวนผู้เข้าร่วม: {winnerData.summary.totalParticipatingUsers}</p>
+                                <p>จำนวนตั๋วทั้งหมด: {winnerData.summary.totalTicketsSold}</p>
+                                <p>ตั๋วรางวัล: {winnerData.summary.totalWinningTickets}</p>
                             </div>
                         </div>
 
@@ -347,13 +389,15 @@ export default function LotteryHistoryPage() {
                                 <div>
                                     <p className="font-medium">ที่อยู่ผู้ชนะ:</p>
                                     <p className="bg-white p-2 rounded-md break-words">
-                                        {parseWinnerData(winnerData).winnerAddress}
+                                        {winnerData.participants[0].address}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="font-medium">ตั๋วรางวัล:</p>
                                     <p className="bg-white p-2 rounded-md">
-                                        {parseWinnerData(winnerData).winningTicket}
+                                        {winnerData.participants[0].tickets.length > 0 
+                                            ? winnerData.participants[0].tickets[0].number 
+                                            : 'ไม่มีตั๋วรางวัล'}
                                     </p>
                                 </div>
                             </div>

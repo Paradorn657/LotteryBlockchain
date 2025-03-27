@@ -3,11 +3,23 @@ import Link from "next/link";
 import SignOut from "./signout";
 import ConnectWallet from "./connectWallet";
 
+export async function getUserTickets(userAddress) {
+    if (!userAddress) return [];
+    
+    const res = await fetch(`http://localhost:5000/api/user-tickets/${userAddress}`);
+    const data = await res.json();
+    return data.tickets || [];
+}
+
 export default async function Nav() {
     const session = await auth();
     if (session) {
         console.log(session.user);
     }
+    console.log(session?.user.address)
+    const userTicketsData = await getUserTickets(session?.user.address)
+    console.log(userTicketsData)
+    
     return (
         <nav className="bg-gradient-to-r from-blue-800 to-blue-400 text-white shadow-lg">
             <div className="flex justify-between items-center px-4 py-2">
@@ -68,6 +80,14 @@ export default async function Nav() {
                                     </a>
                                 </li>
                                 <li>
+                                    <label htmlFor="tickets-modal" className="flex items-center gap-2 cursor-pointer">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                        </svg>
+                                        My Tickets
+                                    </label>
+                                </li>
+                                <li>
                                     <a className="flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -89,6 +109,41 @@ export default async function Nav() {
                         </a>
                     )}
                 </div>
+            </div>
+            
+            {/* Tickets Modal */}
+            <input type="checkbox" id="tickets-modal" className="modal-toggle" />
+            <div className="modal">
+                <div className="modal-box">
+                    <h3 className="font-bold text-lg text-center">My Lottery Tickets</h3>
+                    <div className="py-4">
+                        {userTicketsData && userTicketsData.length > 0 ? (
+                            <div className="space-y-4">
+                                {userTicketsData.map((roundData, index) => (
+                                    <div key={index} className="border rounded-lg p-4 bg-blue-50">
+                                        <h4 className="font-semibold text-blue-800 mb-2">Round {roundData.roundId}</h4>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {roundData.tickets.map((ticket, ticketIndex) => (
+                                                <div key={ticketIndex} className="bg-black p-3 rounded-md shadow border border-blue-200 text-center font-mono">
+                                                    {ticket}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <p className="text-gray-500">You don't have any tickets yet.</p>
+                                <a href="/buy-tickets" className="btn btn-primary mt-4">Buy Tickets</a>
+                            </div>
+                        )}
+                    </div>
+                    <div className="modal-action">
+                        <label htmlFor="tickets-modal" className="btn">Close</label>
+                    </div>
+                </div>
+                <label className="modal-backdrop" htmlFor="tickets-modal"></label>
             </div>
         </nav>
     );

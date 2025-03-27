@@ -139,8 +139,11 @@ app.get("/api/latest-round", async (req, res) => {
 app.get("/api/user-tickets/:userAddress", async (req, res) => {
     try {
       const { userAddress } = req.params;
+      console.log(userAddress)
       const userTickets = await lotteryContract.getAllUserTickets(userAddress);
       // Convert BigInts to strings
+      console.log(userAddress)
+      console.log(userTickets)
       const formattedTickets = userTickets.map((entry) => ({
         roundId: entry[0].toString(),  // Extract roundId
         tickets: entry[1].map((ticket) => ticket.toString()),  // Extract and convert tickets

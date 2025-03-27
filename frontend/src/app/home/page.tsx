@@ -41,6 +41,14 @@ export async function getwinningNumberById(roundId: number) {
     return data;
 }
 
+export async function getUserTickets(userAddress) {
+    if (!userAddress) return [];
+    
+    const res = await fetch(`http://localhost:5000/api/user-tickets/${userAddress}`);
+    const data = await res.json();
+    return data.tickets || [];
+}
+
 async function sendTransaction() {
     console.log("ส่ง")
     if (!window.ethereum) {
@@ -54,8 +62,8 @@ async function sendTransaction() {
         const signer = await provider.getSigner();
 
         const tx = await signer.sendTransaction({
-            to: "0x22810915ec46eb0313Db6c48b6Df422070cfda4F",
-            value: ethers.parseEther("80"), // Convert ETH to Wei
+            to: "0x6EbfA865b873588f3E6bF3a5ADC0843cDd6968BA",
+            value: ethers.parseEther("0.5"), // Convert ETH to Wei
         });
         // setStatus("Transaction sent! Waiting for confirmation...");
         await tx.wait(); // Wait for transaction confirmation
@@ -104,6 +112,7 @@ export default function Home() {
     const [buying, setBuying] = useState(false);
     const [buyerAddress, setBuyerAddress] = useState("");
     const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+    const [userTickets, setUserTickets] = useState([]);
     const { data: session } = useSession();
 
     useEffect(() => {
@@ -122,6 +131,12 @@ export default function Home() {
                 const ticketData = await getTickets(latestRound);
                 console.log("ticketdata", ticketData);
                 setTickets(ticketData);
+                
+                // Fetch user tickets if session exists
+                if (session?.user?.address) {
+                    const userTicketsData = await getUserTickets(session.user.address);
+                    setUserTickets(userTicketsData);
+                }
             } catch (error) {
                 console.error("Error fetching data:", error);
                 setNotification({
@@ -134,7 +149,7 @@ export default function Home() {
             }
         }
         fetchData();
-    }, []);
+    }, [session?.user?.address]);
 
     const handleBuyTicket = async (ticketNumber:number,type:string) => {
         console.log(buyerAddress)
@@ -155,12 +170,16 @@ export default function Home() {
                 message: `ซื้อ${type=='single'?"เดี่ยว":"ชุด 2 ใบ"} เลข ${ticketNumber} เรียบร้อยแล้ว!`,
                 type: "success"
             });
-            // Refresh ticket list after successful purchase
+            
+            // Refresh user tickets after successful purchase
+            if (session?.user?.address) {
+                const userTicketsData = await getUserTickets(session.user.address);
+                setUserTickets(userTicketsData);
+            }
+            
+            // Refresh available tickets after successful purchase
             const ticketData = await getTickets(roundId);
-            console.log(ticketData);
             setTickets(ticketData);
-            // const ticketData = await getTickets(roundId);
-            // setTickets(ticketData);
         } catch (error) {
             console.log(`Error purchasing ticket: ${error.message}`);
             setNotification({

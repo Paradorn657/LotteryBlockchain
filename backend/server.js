@@ -197,6 +197,31 @@ app.post("/api/buy-tickets", async (req, res) => {
     }
   });
 
+  app.get("/api/getWinningResults", async (req, res) => {
+    try {
+      // เรียกใช้ฟังก์ชัน getWinningResults จาก Smart Contract
+      const winningResults = await lotteryContract.getWinningResults();
+      
+      // สมมติว่า winningResults เป็น array ของ ClaimResult struct ที่มี field:
+      // user, roundId, ticketNumber, ticketType, prizeRank
+      // ทำการแปลง BigNumber เป็น string/number เพื่อให้แสดงผลได้
+      const formattedResults = winningResults.map(result => ({
+        user: result.user,
+        roundId: result.roundId.toString(),
+        ticketNumber: result.ticketNumber.toString(),
+        ticketType: result.ticketType,
+        prizeRank: result.prizeRank.toString()
+      }));
+      console.log("คนที่ชนะทั้งหมด:", formattedResults);
+      
+      res.json({ success: true, data: formattedResults });
+    } catch (error) {
+      console.error("Error fetching winning results:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+
 // เปิด Server
 const PORT = 5000;
 app.listen(PORT, () => {

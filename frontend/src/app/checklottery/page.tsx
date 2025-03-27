@@ -61,6 +61,7 @@ export default function LotteryHistoryPage() {
                 setError(null);
                 try {
                     const result = await getwinningNumberById(selectedRound);
+
                     setWinningNumber(result);
                 } catch (error) {
                     console.error("Error fetching winning numbers:", error);
@@ -106,7 +107,7 @@ export default function LotteryHistoryPage() {
                                 id="roundSelect"
                                 value={selectedRound}
                                 onChange={handleRoundChange}
-                                className="block w-full pl-4 pr-10 py-3 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 rounded-lg shadow-sm bg-white transition-all"
+                                className="block w-full pl-4  py-3 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 rounded-lg shadow-sm bg-white transition-all"
                             >
                                 {roundOptions.map((round) => (
                                     <option key={round} value={round}>
@@ -114,11 +115,7 @@ export default function LotteryHistoryPage() {
                                     </option>
                                 ))}
                             </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            </div>
+                            
                         </div>
                     </div>
                 </div>

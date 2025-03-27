@@ -64,10 +64,13 @@ const authConfig: NextAuthConfig = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             if (user) {
                 token.id = user.id;
                 token.address = user.address;
+            }
+            if (trigger === "update") {
+                return { ...token, ...session.user}
             }
             return token;
         },

@@ -1,6 +1,6 @@
 const express = require("express");
 const { ethers } = require("ethers");
-
+require('dotenv').config()
 const cron = require("node-cron");
 const cors = require("cors");
 
@@ -9,11 +9,11 @@ const app = express();
 app.use(cors()); // เพื่อให้ Next.js เรียก API ได้
 app.use(express.json());
 
-const provider = new ethers.JsonRpcProvider("HTTP://192.168.1.36:8545"); // ใช้ Ganache หรือ Hardhat
-const contractAddress = "0xBeff904Bc780Fe3876e930B4b24a5804fD01dBf5"; // ใส่ address ที่ deploy แล้ว
+const provider = new ethers.JsonRpcProvider(process.env.PROVIDER_URL); // ใช้ Ganache หรือ Hardhat
+const contractAddress = process.env.CONTRACT_ADDRESS; // ใส่ address ที่ deploy แล้ว
 const lotteryABI = require("../contract/artifacts/contracts/Lottery.sol/Lottery.json").abi;
 //ใช้ private key เพื่อสร้าง wallet เอาไว้บอกเจ้าของ
-const wallet = new ethers.Wallet("0xd6c38e609f9845b8f98d9cef19e2cfabf6cb223143073102fb1d69e18d9447b2", provider); // ใช้ private key ที่คุณมี
+const wallet = new ethers.Wallet(process.env.OWNER_PRIVATE_KEY, provider); // ใช้ private key ที่คุณมี
 const lotteryContract = new ethers.Contract(contractAddress, lotteryABI, wallet);
 async function autoGenerateLottery() {
     try {

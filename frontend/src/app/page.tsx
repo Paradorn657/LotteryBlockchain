@@ -51,7 +51,7 @@ export async function getUserTickets(userAddress: string) {
   return data.tickets || [];
 }
 
-async function sendTransaction() {
+async function sendTransaction(typegay: string) {
   console.log("ส่ง")
   if (!(window as any).ethereum) {
     alert("Please install MetaMask!");
@@ -62,13 +62,25 @@ async function sendTransaction() {
     console.log("wow")
     const provider = new ethers.BrowserProvider((window as any).ethereum);
     const signer = await provider.getSigner();
-
-    const value = await convertTHBtoETH(80);
-    if (!value) {
-      return {
-        status: "failed"
+    let value;
+    if(typegay == "pair")
+    {
+      value = await convertTHBtoETH(160);
+      if (!value) {
+        return {
+          status: "failed"
+        }
+      }
+    }else
+    {
+      value = await convertTHBtoETH(80);
+      if (!value) {
+        return {
+          status: "failed"
+        }
       }
     }
+
     const amountInWei = ethers.parseEther(value.toFixed(18));
 
     const tx = await signer.sendTransaction({
@@ -90,9 +102,10 @@ async function sendTransaction() {
   }
 }
 
-export async function buyTicket(roundId: number, ticketNumber: number, buyerAddress: string) {
+
+export async function buyTicket(roundId: number, ticketNumber: number, buyerAddress: string, type: string) {
   console.log("buyticket")
-  const result = await sendTransaction();
+  const result = await sendTransaction(type);
   if (!result?.hash) {
     return
   }
@@ -173,7 +186,7 @@ export default function Home() {
     }
     setBuying(true);
     try {
-      const txMessage = await buyTicket(roundId, ticketNumber, buyerAddress);
+      const txMessage = await buyTicket(roundId, ticketNumber, buyerAddress, type);
       console.log(txMessage);
       setNotification({
         show: true,

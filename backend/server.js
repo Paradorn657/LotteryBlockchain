@@ -44,7 +44,7 @@ async function autoGenerateLottery() {
       round = await lotteryContract.getLatestRoundId(); // อัปเดตรอบใหม่หลังจากสร้าง
     }
   
-    cron.schedule("*/1 * * * *", async () => {
+    cron.schedule("*/3 * * * *", async () => {
       try {
         round = await lotteryContract.getLatestRoundId(); // ดึงรอบล่าสุดก่อนออกรางวัล
         console.log("กำลังออกรางวัล... งวดที่", round.toString());
@@ -57,7 +57,7 @@ async function autoGenerateLottery() {
         await autoGenerateLottery();
 
         // Get round results
-        const roundResults = await lotteryContract.printRoundResults(round-1);
+        const roundResults = await lotteryContract.printRoundResults(round - BigInt(1));
         const winners = extractWinners(roundResults);
 
         let transactions = [];

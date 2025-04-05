@@ -44,7 +44,7 @@ async function autoGenerateLottery() {
       round = await lotteryContract.getLatestRoundId(); // อัปเดตรอบใหม่หลังจากสร้าง
     }
   
-    cron.schedule("*/3 * * * *", async () => {
+    cron.schedule("*/5 * * * *", async () => {
       try {
         round = await lotteryContract.getLatestRoundId(); // ดึงรอบล่าสุดก่อนออกรางวัล
         console.log("กำลังออกรางวัล... งวดที่", round.toString());
@@ -171,9 +171,9 @@ app.get("/api/user-tickets/:userAddress", async (req, res) => {
   });
 
   const PRIZES = {
-    "FIRST PRIZE": ethers.parseEther("10"), // 10 ETH
-    "SECOND PRIZE": ethers.parseEther("5"),  // 5 ETH
-    "THIRD PRIZE": ethers.parseEther("1")   // 1 ETH
+    "FIRST PRIZE": ethers.parseEther("0.01"), // 10 ETH
+    "SECOND PRIZE": ethers.parseEther("0.005"),  // 5 ETH
+    "THIRD PRIZE": ethers.parseEther("0.001")   // 1 ETH
 };
 
 // Function to extract winners and their prize amounts

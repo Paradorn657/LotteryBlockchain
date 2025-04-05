@@ -423,7 +423,7 @@ export default function Home() {
                     >
                       <div className="flex justify-between mb-2 text-xs text-gray-500">
                         <span>สำนักงานสลากฯ</span>
-                        <span>80 บาท</span>
+                        <span>160 บาท</span>
                       </div>
 
                       <div className="bg-white p-3 rounded-lg shadow-inner mb-3">
